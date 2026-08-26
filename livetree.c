@@ -1126,9 +1126,36 @@ static void sort_node(struct node *node)
 		sort_node(c);
 }
 
+static void sort_importsyms(struct dt_info *dti)
+{
+	int n = 0, i = 0;
+	struct symbol *symbol, **tbl;
+
+	for_each_symbol(dti->importsymlist, symbol)
+		n++;
+
+	if (n == 0)
+		return;
+
+	tbl = xmalloc(n * sizeof(*tbl));
+
+	for_each_symbol(dti->importsymlist, symbol)
+		tbl[i++] = symbol;
+
+	qsort(tbl, n, sizeof(*tbl), cmp_symbol);
+
+	dti->importsymlist = tbl[0];
+	for (i = 0; i < (n-1); i++)
+		tbl[i]->next = tbl[i+1];
+	tbl[n-1]->next = NULL;
+
+	free(tbl);
+}
+
 void sort_tree(struct dt_info *dti)
 {
 	sort_reserve_entries(dti);
+	sort_importsyms(dti);
 	sort_node(dti->dt);
 }
 
