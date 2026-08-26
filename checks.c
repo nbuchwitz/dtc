@@ -155,6 +155,7 @@ static bool is_multiple_of(int multiple, int divisor)
 static bool run_check(struct check *c, struct dt_info *dti)
 {
 	struct node *dt = dti->dt;
+	struct node *orphan;
 	bool error = false;
 	int i;
 
@@ -179,6 +180,9 @@ static bool run_check(struct check *c, struct dt_info *dti)
 		goto out;
 
 	check_nodes_props(c, dti, dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		check_nodes_props(c, dti, orphan);
 
 	if (c->status == UNCHECKED)
 		c->status = PASSED;
@@ -313,7 +317,12 @@ ERROR(duplicate_property_names, check_duplicate_property_names, NULL);
 static void check_node_name_chars(struct check *c, struct dt_info *dti,
 				  struct node *node)
 {
-	size_t n = strspn(node->name, c->data);
+	size_t n;
+
+	if ((dti->dtsflags & DTSF_ADDON) && node_is_orphan(dti, node))
+		return; /* Checking name doesn't make sense for an orphan node */
+
+	n = strspn(node->name, c->data);
 
 	if (n < strlen(node->name))
 		FAIL(c, dti, node, "Bad character '%c' in node name",
@@ -324,7 +333,12 @@ ERROR(node_name_chars, check_node_name_chars, NODECHARS);
 static void check_node_name_chars_strict(struct check *c, struct dt_info *dti,
 					 struct node *node)
 {
-	size_t n = strspn(node->name, c->data);
+	size_t n;
+
+	if ((dti->dtsflags & DTSF_ADDON) && node_is_orphan(dti, node))
+		return; /* Checking name doesn't make sense for an orphan node */
+
+	n = strspn(node->name, c->data);
 
 	if (n < node->basenamelen)
 		FAIL(c, dti, node, "Character '%c' not recommended in node name",
@@ -623,6 +637,15 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 				if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)))
 					FAIL(c, dti, node, "Reference to non-existent node or "
 							"label \"%s\"\n", m->ref);
+				else /* mark the entry as unresolved */
+					*((fdt32_t *)(prop->val.val + m->offset)) =
+						cpu_to_fdt32(0xffffffff);
+				continue;
+			}
+			if (node_is_orphan(dti, refnode)) {
+				if (!(dti->dtsflags & DTSF_ADDON))
+					FAIL(c, dti, node, "Reference to orphan node \"%s\"\n",
+						m->ref);
 				else /* mark the entry as unresolved */
 					*((fdt32_t *)(prop->val.val + m->offset)) =
 						cpu_to_fdt32(0xffffffff);
