@@ -370,6 +370,7 @@ static void write_propval(FILE *f, struct property *prop)
 
 static void write_tree_source_node(FILE *f, struct node *tree, int level)
 {
+	struct symbol *exportsym;
 	struct property *prop;
 	struct node *child;
 	struct label *l;
@@ -399,6 +400,18 @@ static void write_tree_source_node(FILE *f, struct node *tree, int level)
 		fprintf(f, "%s", prop->name);
 		write_propval(f, prop);
 	}
+
+	if (tree->exportsymlist)
+		fprintf(f, "\n");
+	for_each_symbol(tree->exportsymlist, exportsym) {
+		write_prefix(f, level+1);
+		fprintf(f, "/export/ %s: ", exportsym->name);
+		if (exportsym->ref[0] == '/')
+			fprintf(f, "&{%s};\n", exportsym->ref);
+		else
+			fprintf(f, "&%s;\n", exportsym->ref);
+	}
+
 	for_each_child(tree, child) {
 		fprintf(f, "\n");
 		write_tree_source_node(f, child, level+1);
