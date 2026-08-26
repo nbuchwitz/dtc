@@ -206,6 +206,18 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 			continue;
 		}
 
+		if (tag == FDT_BEGIN_NODE_REF) {
+			last_prop_name = NULL;
+
+			p = get_structured_tag_data(tag, p, &d, &sz);
+			s = d;
+
+			printf("%*s&%s {\n", depth * shift, "", s);
+
+			depth++;
+			continue;
+		}
+
 		if (tag == FDT_EXPORT_SYM) {
 			p = get_structured_tag_data(tag, p, &d, &sz);
 			val32 = fdt32_to_cpu(GET_CELL(d));

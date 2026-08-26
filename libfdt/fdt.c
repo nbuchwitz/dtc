@@ -308,6 +308,27 @@ static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffs
 		offset = sum;
 		break;
 
+	case FDT_BEGIN_NODE_REF:
+		tmp_offset = fdt_get_structured_tag_data(tag, fdt, offset, &len);
+		if (tmp_offset < 0)
+			return FDT_END; /* premature end */
+
+		sum = tmp_offset + len;
+
+		/* Check ref */
+		do {
+			p = fdt_offset_ptr(fdt, tmp_offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+
+		if (!can_assume(VALID_INPUT) && (uint32_t)tmp_offset > sum)
+			return FDT_END; /* premature end */
+
+		/* Skip the whole data bloc */
+		offset = sum;
+		break;
+
 	case FDT_EXPORT_SYM:
 		tmp_offset = fdt_get_structured_tag_data(tag, fdt, offset, &len);
 		if (tmp_offset < 0)
@@ -424,6 +445,7 @@ static bool fdt_tag_is_unknown(uint32_t tag)
 	case FDT_EXPORT_SYM:
 	case FDT_EXPORT_SYM_REF:
 	case FDT_IMPORT_SYM:
+	case FDT_BEGIN_NODE_REF:
 		return false;
 	default:
 		break;
@@ -484,6 +506,7 @@ bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag)
 	case FDT_IMPORT_SYM:
 		return true;
 
+	case FDT_BEGIN_NODE_REF: /* Not metadata but rather node definition */
 	default:
 		break;
 	}
@@ -506,11 +529,15 @@ bool fdt_tag_is_property_metadata(uint32_t tag)
 
 int fdt_check_node_offset_(const void *fdt, int offset)
 {
+	uint32_t tag;
+
 	if (!can_assume(VALID_INPUT)
 	    && ((offset < 0) || (offset % FDT_TAGSIZE)))
 		return -FDT_ERR_BADOFFSET;
 
-	if (fdt_next_tag(fdt, offset, &offset) != FDT_BEGIN_NODE)
+
+	tag = fdt_next_tag(fdt, offset, &offset);
+	if (tag != FDT_BEGIN_NODE && tag != FDT_BEGIN_NODE_REF)
 		return -FDT_ERR_BADOFFSET;
 
 	return offset;
@@ -545,6 +572,10 @@ int fdt_root_offset(const void *fdt)
 
 		case FDT_BEGIN_NODE:
 			return offset;
+
+		case FDT_BEGIN_NODE_REF:
+			/* An orphan node cannot be considered as a "first" node */
+			return -FDT_ERR_NOTFOUND;
 
 		default:
 			break;
@@ -587,6 +618,10 @@ int fdt_next_node(const void *fdt, int offset, int *depth)
 				(*depth)++;
 			break;
 
+		case FDT_BEGIN_NODE_REF:
+			/* An orphan node cannot be found using fdt_next_node() */
+			return -FDT_ERR_BADSTRUCTURE;
+
 		case FDT_END_NODE:
 			if (depth && ((--(*depth)) < 0))
 				return nextoffset;
@@ -628,6 +663,64 @@ int fdt_next_subnode(const void *fdt, int offset)
 		if (offset < 0 || depth < 1)
 			return -FDT_ERR_NOTFOUND;
 	} while (depth > 1);
+
+	return offset;
+}
+
+int fdt_check_orphan_offset(const void *fdt, int offset, int *data_offset)
+{
+	int nextoffset;
+	uint32_t tag;
+	int d;
+
+	tag = fdt_next_tag(fdt, offset, &nextoffset);
+	switch (tag) {
+	case FDT_BEGIN_NODE_REF:
+		if (data_offset) {
+			d = fdt_get_structured_tag_data(tag, fdt,
+							offset + FDT_TAGSIZE,
+							NULL);
+			if (d < 0)
+				return d;
+			*data_offset = d;
+		}
+		break;
+	default:
+		return -FDT_ERR_BADOFFSET;
+	}
+
+	return nextoffset;
+}
+
+int fdt_next_orphan_offset(const void *fdt, int offset)
+{
+	int nextoffset = 0;
+	uint32_t tag;
+
+	if (offset < 0)
+		return offset;
+
+	if (offset != 0) {
+		nextoffset = fdt_check_orphan_offset(fdt, offset, NULL);
+		if (nextoffset < 0)
+			return nextoffset;
+	}
+
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag(fdt, offset, &nextoffset);
+
+		switch (tag) {
+		case FDT_BEGIN_NODE_REF:
+			return offset;
+
+		case FDT_END:
+			if (nextoffset < 0)
+				return nextoffset;
+
+			return -FDT_ERR_NOTFOUND;
+		}
+	} while (tag != FDT_BEGIN_NODE_REF);
 
 	return offset;
 }

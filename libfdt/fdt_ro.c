@@ -317,6 +317,8 @@ const char *fdt_get_name(const void *fdt, int nodeoffset, int *len)
 {
 	const struct fdt_node_header *nh;
 	const char *nameptr;
+	int nextoffset;
+	uint32_t tag;
 	int err;
 
 	if (!nodeoffset) {
@@ -331,6 +333,18 @@ const char *fdt_get_name(const void *fdt, int nodeoffset, int *len)
 	if (!can_assume(VALID_DTB) && (((err = fdt_ro_probe_(fdt)) < 0)
 	    || ((err = fdt_check_node_offset_(fdt, nodeoffset)) < 0)))
 			goto fail;
+
+	/*
+	 * fdt_check_node_offset_() considers FDT_BEGIN_NODE_REF as a node.
+	 * A FDT_BEGIN_NODE_REF tag, which represents an orphan node, doesn't
+	 * have any 'name' attached but only a reference to the external node
+	 * the orphan node refers to. No way to get a name.
+	 */
+	tag = fdt_next_tag(fdt, nodeoffset, &nextoffset);
+	if (tag == FDT_BEGIN_NODE_REF) {
+		err = FDT_ERR_BADOFFSET;
+		goto fail;
+	}
 
 	nh = fdt_offset_ptr_(fdt, nodeoffset);
 	nameptr = nh->name;
@@ -760,7 +774,7 @@ int fdt_node_offset_by_prop_value(const void *fdt, int startoffset,
 	return offset; /* error from fdt_next_node() */
 }
 
-int fdt_node_offset_by_phandle(const void *fdt, uint32_t phandle)
+static int fdt_node_offset_by_phandle_(const void *fdt, int start_node_offset, uint32_t phandle)
 {
 	int offset;
 
@@ -775,7 +789,7 @@ int fdt_node_offset_by_phandle(const void *fdt, uint32_t phandle)
 	 * we want, we scan over them again making our way to the next
 	 * node.  Still it's the easiest to implement approach;
 	 * performance can come later. */
-	for (offset = fdt_next_node(fdt, -1, NULL);
+	for (offset = fdt_next_node(fdt, start_node_offset, NULL);
 	     offset >= 0;
 	     offset = fdt_next_node(fdt, offset, NULL)) {
 		if (fdt_get_phandle(fdt, offset) == phandle)
@@ -783,6 +797,34 @@ int fdt_node_offset_by_phandle(const void *fdt, uint32_t phandle)
 	}
 
 	return offset; /* error from fdt_next_node() */
+}
+
+int fdt_node_offset_by_phandle(const void *fdt, uint32_t phandle)
+{
+	return fdt_node_offset_by_phandle_(fdt, -1, phandle);
+}
+
+int fdta_node_offset_by_phandle(const void *fdta, uint32_t phandle)
+{
+	int orphan;
+	int node;
+
+	/* Look at root node tree */
+	node = fdt_node_offset_by_phandle_(fdta, -1, phandle);
+	if (node >= 0)
+		return node;
+
+	/* Look at orphans and their trees */
+	fdt_for_each_orphan(orphan, fdta) {
+		if (fdt_get_phandle(fdta, orphan) == phandle)
+			return orphan;
+
+		node = fdt_node_offset_by_phandle_(fdta, orphan, phandle);
+		if (node >= 0)
+			return node;
+	}
+
+	return -FDT_ERR_NOTFOUND;
 }
 
 int fdt_stringlist_contains(const char *strlist, int listlen, const char *str)

@@ -154,6 +154,24 @@ struct fdt_property {
  */
 #define FDT_IMPORT_SYM	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2100)
 
+/*
+ * Node reference tag. varlen: node symbol name
+ *
+ * It defines a node external to the dtb but modified by the dtb. It can be
+ * present in an addon dtb.
+ *
+ * For instance, if an addon adds a sub-node to a node existing in the
+ * device-tree the addon is applied to, the existing node needs to be
+ * referenced by the addon dtb. This is the purpose of FDT_BEGIN_NODE_REF.
+ *
+ * node symbol name: The symbol name used to reference the node in the base
+ *                   device-tree when the addon is applied.
+ *
+ * Following the tag and its related node symbol name, the node structure is
+ * present. After the node structure, the FTD_END_NODE tag is present.
+ */
+#define FDT_BEGIN_NODE_REF FDT_TAG_NO_SKIP(FDT_TAG_DATA_VARLEN, 0x2200)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))

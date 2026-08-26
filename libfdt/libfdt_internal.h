@@ -61,6 +61,16 @@ static inline const char *fdt_find_string_(const char *strtab, int tabsize,
 
 int fdt_node_end_offset_(void *fdt, int nodeoffset);
 
+int fdt_check_orphan_offset(const void *fdt, int offset, int *data_offset);
+int fdt_next_orphan_offset(const void *fdt, int offset);
+
+#define fdt_for_each_orphan(orphan, fdt)			\
+	for (orphan = fdt_next_orphan_offset(fdt, 0);		\
+	     orphan >= 0;					\
+	     orphan = fdt_next_orphan_offset(fdt, orphan))
+
+int fdta_node_offset_by_phandle(const void *fdta, uint32_t phandle);
+
 static inline const void *fdt_offset_ptr_(const void *fdt, int offset)
 {
 	return (const char *)fdt + fdt_off_dt_struct(fdt) + offset;

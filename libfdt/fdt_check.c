@@ -23,6 +23,7 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 	bool root_node_found = false;
 	bool subnode_found = false;
 	bool import_sym_found = false;
+	bool orphan_found = false;
 	const fdt32_t *pfdt32;
 	const char *str;
 	uint32_t val;
@@ -80,6 +81,10 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 				if (import_sym_found)
 					return -FDT_ERR_BADSTRUCTURE;
 
+				/* Orphan nodes must be after the root node */
+				if (orphan_found)
+					return -FDT_ERR_BADSTRUCTURE;
+
 				/* The root node must have an empty name */
 				name = fdt_get_name(fdt, offset, &len);
 				if (!name)
@@ -133,7 +138,10 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			val = fdt32_ld(pfdt32);
 
 			/* Check the phandle value */
-			tmp = fdt_node_offset_by_phandle(fdt, val);
+			if (!(fdt_dt_flags(fdt) & FDT_FLAG_ADDON))
+				tmp = fdt_node_offset_by_phandle(fdt, val);
+			else
+				tmp = fdta_node_offset_by_phandle(fdt, val);
 			if (tmp < 0)
 				return tmp;
 			break;
@@ -192,7 +200,10 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			val = fdt32_ld(pfdt32);
 
 			/* Check the phandle value */
-			tmp = fdt_node_offset_by_phandle(fdt, val);
+			if (!(fdt_dt_flags(fdt) & FDT_FLAG_ADDON))
+				tmp = fdt_node_offset_by_phandle(fdt, val);
+			else
+				tmp = fdta_node_offset_by_phandle(fdt, val);
 			if (tmp < 0)
 				return tmp;
 
@@ -249,6 +260,10 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			if (!(fdt_dt_flags(fdt) & FDT_FLAG_ADDON))
 				return -FDT_ERR_BADVALUE;
 
+			/* Orphans must be after import symbols */
+			if (orphan_found)
+				return -FDT_ERR_BADSTRUCTURE;
+
 			import_sym_found = true;
 
 			d = fdt_get_structured_tag_data(tag, fdt,
@@ -277,6 +292,34 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			 * -> No additional check
 			 */
 
+			break;
+
+		case FDT_BEGIN_NODE_REF:
+			if (!(fdt_dt_flags(fdt) & FDT_FLAG_ADDON))
+				return -FDT_ERR_BADVALUE;
+
+			prop = NULL;
+			depth++;
+
+			/* Orphan nodes can only be present as top level nodes */
+			if (depth != 1)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			orphan_found = true;
+
+			d = fdt_get_structured_tag_data(tag, fdt,
+							offset + FDT_TAGSIZE, NULL);
+			if (d < 0)
+				return d;
+
+			/* Retrieve the reference */
+			str = fdt_offset_ptr(fdt, d, 1);
+			if (!str)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* Check that the reference is not an empty string */
+			if (!strlen(str))
+				return -FDT_ERR_BADVALUE;
 			break;
 
 		default:
