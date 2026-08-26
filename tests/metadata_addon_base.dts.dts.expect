@@ -1,0 +1,10 @@
+/dts-v1/;
+/addon/;
+
+/ {
+
+	node-a {
+		prop = <0x01>;
+		ref-base = <&base>;
+	};
+};

@@ -1,0 +1,10 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    node-a {
+        prop = <0x00000001>;
+        ref-base = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref-base[0], ref = base
+    };
+};
