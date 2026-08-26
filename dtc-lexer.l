@@ -108,6 +108,11 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			return DT_PLUGIN;
 		}
 
+<*>"/addon/"	{
+			DPRINT("Keyword: /addon/\n");
+			return DT_ADDON;
+		}
+
 <*>"/memreserve/"	{
 			DPRINT("Keyword: /memreserve/\n");
 			BEGIN_DEFAULT();

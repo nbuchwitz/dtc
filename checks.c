@@ -624,7 +624,7 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 
 			refnode = get_node_by_ref(dt, m->ref);
 			if (! refnode) {
-				if (!(dti->dtsflags & DTSF_PLUGIN))
+				if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)))
 					FAIL(c, dti, node, "Reference to non-existent node or "
 							"label \"%s\"\n", m->ref);
 				else /* mark the entry as unresolved */
@@ -726,8 +726,8 @@ static void check_alias_paths(struct check *c, struct dt_info *dti,
 			continue;
 		}
 
-		/* This check does not work for overlays with external paths */
-		if (!(dti->dtsflags & DTSF_PLUGIN) &&
+		/* This check does not work for overlays nor addons with external paths */
+		if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)) &&
 		    (!prop->val.val || !get_node_by_path(dti->dt, prop->val.val))) {
 			FAIL_PROP(c, dti, node, prop, "aliases property is not a valid node (%s)",
 				  prop->val.val);
@@ -1425,8 +1425,8 @@ static void check_property_phandle_args(struct check *c,
 		 * entries when each index position has a specific definition.
 		 */
 		if (!phandle_is_valid(phandle)) {
-			/* Give up if this is an overlay with external references */
-			if (dti->dtsflags & DTSF_PLUGIN)
+			/* Give up if this is an overlay or addon with external references */
+			if (dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))
 				break;
 
 			cellsize = 0;
@@ -1659,8 +1659,8 @@ static void check_interrupt_map(struct check *c,
 
 		phandle = propval_cell_n(irq_map_prop, cell);
 		if (!phandle_is_valid(phandle)) {
-			/* Give up if this is an overlay with external references */
-			if (!(dti->dtsflags & DTSF_PLUGIN))
+			/* Give up if this is an overlay or an addon with external references */
+			if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)))
 				FAIL_PROP(c, dti, node, irq_map_prop,
 					  "Cell %zu is not a phandle(%d)",
 					  cell, phandle);
@@ -1728,9 +1728,9 @@ static void check_interrupts_property(struct check *c,
 		if (prop) {
 			phandle = propval_cell(prop);
 			if (!phandle_is_valid(phandle)) {
-				/* Give up if this is an overlay with
+				/* Give up if this is an overlay with or an addon
 				 * external references */
-				if (dti->dtsflags & DTSF_PLUGIN)
+				if (dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))
 					return;
 				FAIL_PROP(c, dti, parent, prop, "Invalid phandle");
 				continue;
@@ -1846,8 +1846,8 @@ static void check_graph_port(struct check *c, struct dt_info *dti,
 
 	check_graph_reg(c, dti, node);
 
-	/* skip checks below for overlays */
-	if (dti->dtsflags & DTSF_PLUGIN)
+	/* skip checks below for overlays or addons */
+	if (dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))
 		return;
 
 	if (!strprefixeq(node->name, node->basenamelen, "port"))
@@ -1888,8 +1888,8 @@ static void check_graph_endpoint(struct check *c, struct dt_info *dti,
 
 	check_graph_reg(c, dti, node);
 
-	/* skip checks below for overlays */
-	if (dti->dtsflags & DTSF_PLUGIN)
+	/* skip checks below for overlays or addons */
+	if (dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))
 		return;
 
 	if (!strprefixeq(node->name, node->basenamelen, "endpoint"))
@@ -2061,6 +2061,16 @@ void process_checks(bool force, struct dt_info *dti)
 {
 	unsigned int i;
 	int error = 0;
+
+	if ((dti->dtsflags & (DTSF_ADDON | DTSF_PLUGIN)) == (DTSF_ADDON | DTSF_PLUGIN)) {
+		/*
+		 * Addons and overlays are mutually exclusive. The same input
+		 * cannot be both.
+		 */
+		fprintf(stderr,
+			"ERROR: Input tree cannot be both an addon and an overlay\n");
+		exit(2);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(check_table); i++) {
 		struct check *c = check_table[i];

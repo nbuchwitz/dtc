@@ -120,6 +120,10 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 		printf("// last_comp_version_w:\t%"PRIu32"\n",
 		       fdt32_to_cpu(bph->last_comp_version_w));
 	}
+	if (version >= 18) {
+		if (fdt32_to_cpu(bph->dt_flags) & FDT_FLAG_ADDON)
+			printf("/addon/;\n");
+	}
 	printf("\n");
 
 	for (i = 0; ; i++) {

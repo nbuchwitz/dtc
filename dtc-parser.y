@@ -53,6 +53,7 @@ static bool is_ref_relative(const char *ref)
 
 %token DT_V1
 %token DT_PLUGIN
+%token DT_ADDON
 %token DT_MEMRESERVE
 %token DT_LSHIFT DT_RSHIFT DT_LE DT_GE DT_EQ DT_NE DT_AND DT_OR
 %token DT_BITS
@@ -119,6 +120,10 @@ header:
 	| DT_V1 ';' DT_PLUGIN ';'
 		{
 			$$ = DTSF_V1 | DTSF_PLUGIN;
+		}
+	| DT_V1 ';' DT_ADDON ';'
+		{
+			$$ = DTSF_V1 | DTSF_ADDON;
 		}
 	;
 

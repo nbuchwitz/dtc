@@ -420,8 +420,14 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 	struct reserve_info *re;
 
 	fprintf(f, "/dts-v1/;\n");
+	/*
+	 * DTSF_PLUGIN and DTSF_ADDON are mutually exclusive. This has been
+	 * already checked.
+	 */
 	if (dti->dtsflags & DTSF_PLUGIN)
 		fprintf(f, "/plugin/;\n");
+	if (dti->dtsflags & DTSF_ADDON)
+		fprintf(f, "/addon/;\n");
 	fprintf(f, "\n");
 
 	for (re = dti->reservelist; re; re = re->next) {

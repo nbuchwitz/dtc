@@ -52,6 +52,7 @@ struct fdt_property {
 #endif /* !__ASSEMBLER__ */
 
 #define FDT_MAGIC	0xd00dfeed	/* 4: version, 4: total size */
+#define FDT_FLAG_ADDON  0x1
 #define FDT_TAGSIZE	sizeof(fdt32_t)
 #define FDT_CELLSIZE	sizeof(fdt32_t)
 
