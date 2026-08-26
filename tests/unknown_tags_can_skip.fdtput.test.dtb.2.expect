@@ -1,0 +1,33 @@
+/dts-v1/;
+// version:		17
+// last_comp_version:	16
+
+// Unknown tag ignored: 0xd0000000, data len 4 00000001
+/ {
+    // Unknown tag ignored: 0xc0000000, data len 0
+    prop-int = <0x00003201>;
+    // Unknown tag ignored: 0xd0000000, data len 4 00000110
+    prop-str = "abcd";
+    // Unknown tag ignored: 0xe0000000, data len 8 0000012000000121
+    // Unknown tag ignored: 0xf0000000, data len 3 101112
+    tst-fdtput {
+    };
+    subnode1 {
+        prop-int = <0x00006401 0x00006402>;
+        // Unknown tag ignored: 0xc0000000, data len 0
+    };
+    subnode2 {
+        // Unknown tag ignored: 0xd0000000, data len 4 00000121
+        prop-int1 = <0x00064020 0x00064021>;
+        // Unknown tag ignored: 0xe0000000, data len 8 0000122000001221
+        prop-int2 = <0x00032022>;
+        subsubnode {
+            // Unknown tag ignored: 0xe0000000, data len 8 0000123000001231
+            prop-bool;
+        };
+        // Unknown tag ignored: 0xf0000000, data len 3 212223
+    };
+    // Unknown tag ignored: 0xf0000000, data len 4 31323334
+};
+// Unknown tag ignored: 0xd0000000, data len 4 00000002
+// Unknown tag ignored: 0xf0000000, data len 2 4041

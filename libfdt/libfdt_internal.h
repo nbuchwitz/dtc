@@ -26,6 +26,9 @@ uint32_t fdt_next_tag_(const void *fdt, int startoffset, int *nextoffset,
 int fdt_check_node_offset_(const void *fdt, int offset);
 int fdt_check_prop_offset_(const void *fdt, int offset);
 
+int fdt_prop_remove_unknown_tags(void *fdt, bool force_inplace,
+				 int prop_offset, bool downgrade_version);
+
 int fdt_getprop_offset_namelen(const void *fdt, int nodeoffset,
 			       const char *name, int namelen);
 static inline int fdt_getprop_offset(const void *fdt, int nodeoffset,

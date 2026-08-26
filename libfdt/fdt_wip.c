@@ -15,16 +15,29 @@ int fdt_setprop_inplace_namelen_partial(void *fdt, int nodeoffset,
 					uint32_t idx, const void *val,
 					int len)
 {
+	int prop_offset;
 	void *propval;
 	int proplen;
+	int err;
 
-	propval = fdt_getprop_namelen_w(fdt, nodeoffset, name, namelen,
-					&proplen);
+	prop_offset = fdt_getprop_offset_namelen(fdt, nodeoffset, name, namelen);
+	if (prop_offset < 0)
+		return prop_offset;
+
+	propval = fdt_getprop_by_offset_w(fdt, prop_offset, NULL, &proplen);
 	if (!propval)
 		return proplen;
 
 	if ((unsigned)proplen < (len + idx))
 		return -FDT_ERR_NOSPACE;
+
+	/*
+	 * Remove unknown tags related to the property downgrading the dtb
+	 * version.
+	 */
+	err = fdt_prop_remove_unknown_tags(fdt, true, prop_offset, true);
+	if (err)
+		return err;
 
 	memcpy((char *)propval + idx, val, len);
 	return 0;
@@ -59,11 +72,22 @@ static void fdt_nop_region_(void *start, int len)
 int fdt_nop_property(void *fdt, int nodeoffset, const char *name)
 {
 	struct fdt_property *prop;
+	int prop_offset;
 	int len;
+	int err;
 
 	prop = fdt_get_property_w(fdt, nodeoffset, name, &len);
 	if (!prop)
 		return len;
+
+	/*
+	 * The property is going to be removed (nopified). Remove unknown tags
+	 * related to this property. Keep the dtb version unchanged.
+	 */
+	prop_offset = fdt_ptr_offset_(fdt, prop);
+	err = fdt_prop_remove_unknown_tags(fdt, true, prop_offset, false);
+	if (err)
+		return err;
 
 	fdt_nop_region_(prop, len + sizeof(*prop));
 
