@@ -593,13 +593,31 @@ static void fill_fullpaths_(struct node *tree, const char *prefix)
 static void fill_fullpaths(struct dt_info *dti)
 {
 	struct node *orphan;
+	struct node *child;
 
 	/* Fill fullpaths for the root node */
 	if (dti->dt)
 		fill_fullpaths_(dti->dt, "");
 
-	for_each_orphan(dti->orphanlist, orphan)
-		fill_fullpaths_(orphan, "__orphan__/");
+	/* Fill fullpaths for orphan nodes */
+	for_each_orphan(dti->orphanlist, orphan) {
+		if (!orphan->ref || orphan->ref[0] == '\0')
+			die("orphan node has an empty ref\n");
+
+		/*
+		 * An orphan node name is set with its reference.
+		 * Its name is in the form "&xxxxx" with xxxxx its reference.
+		 * For its full path, we use "$xxxxx" to make a clear
+		 * distinction between a reference (&xxxxx) where a resolution
+		 * could be involved vs a "simple" path where we just need to
+		 * identified the orphan ($xxxxx).
+		 */
+		xasprintf(&orphan->fullpath, "$%s", orphan->ref);
+		orphan->basenamelen = strlen(orphan->ref) + 1;
+
+		for_each_child(orphan, child)
+			fill_fullpaths_(child, orphan->fullpath);
+	}
 }
 
 static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
@@ -619,14 +637,27 @@ static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
 	 * Also take care of references pointing to an orphan node. Those
 	 * reference are not local references. Indeed, an orphan node is an
 	 * external node.
+	 *
+	 * Even if a path to an orphan node is possible, force to use the
+	 * orphan node reference instead of the path to avoid later complexity
+	 * mostly in dtb generation.
 	 */
 
 	if (*ref) {
 		refnode = get_node_by_ref(dti, *ref);
-		if (refnode && !node_is_orphan(dti, refnode))
-			*is_local = true;
-		else
+		if (!refnode) {
 			*is_local = false;
+			return;
+		}
+
+		if (node_is_orphan(dti, refnode)) {
+			*is_local = false;
+			/* Force to use its reference */
+			*ref = refnode->ref;
+			return;
+		}
+
+		*is_local = true;
 		return;
 	}
 
@@ -939,7 +970,19 @@ static struct node *get_node_by_ref_(struct node *tree, const char *ref)
 			path = slash + 1;
 		}
 
-		target = get_node_by_label_(tree, label);
+		if (label[0] == '$' && tree->ref) {
+			/*
+			 * We search for an orphan and the given tree is an
+			 * orphan. Use the given tree only if it matches the
+			 * expected orphan.
+			 */
+			if (streq(label + 1, tree->ref))
+				target = tree;
+			else
+				target = NULL;
+		} else {
+			target = get_node_by_label_(tree, label);
+		}
 
 		free(buf);
 
@@ -955,6 +998,14 @@ static struct node *get_node_by_ref_(struct node *tree, const char *ref)
 
 struct node *get_node_by_path(struct dt_info *dti, const char *path)
 {
+	if (path && path[0] == '$') {
+		/*
+		 * The path starts from an orphan node. Use get node by ref to
+		 * handle this path involving an orphan node.
+		 */
+		return get_node_by_ref(dti, path);
+	}
+
 	if (dti->dt)
 		return get_node_by_path_(dti->dt, path);
 

@@ -236,6 +236,13 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			return DT_PATH_REF;
 		}
 
+<*>"&{\$"{LABEL}([/]{PATHCHAR}*)?\}  {	/* orphan path reference */
+			yytext[yyleng-1] = '\0';
+			DPRINT("Ref orphan path: %s\n", yytext+1);
+			yylval.labelref = xstrdup(yytext+2);
+			return DT_ORPHAN_PATH_REF;
+		}
+
 <BYTESTRING>[0-9a-fA-F]{2} {
 			yylval.byte = strtol(yytext, NULL, 16);
 			DPRINT("Byte: %02x\n", (int)yylval.byte);

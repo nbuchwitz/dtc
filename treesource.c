@@ -328,7 +328,8 @@ static void write_propval(FILE *f, struct property *prop)
 					break;
 
 			if (m_phandle) {
-				if (m_phandle->ref[0] == '/')
+				if (m_phandle->ref[0] == '/' /* Root node */ ||
+				    m_phandle->ref[0] == '$' /* Orphan node */)
 					fprintf(f, "&{%s}", m_phandle->ref);
 				else
 					fprintf(f, "&%s", m_phandle->ref);

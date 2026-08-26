@@ -111,6 +111,7 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 %token <labelref> DT_LABEL
 %token <labelref> DT_LABEL_REF
 %token <labelref> DT_PATH_REF
+%token <labelref> DT_ORPHAN_PATH_REF
 %token DT_INCBIN
 
 %type <data> propdata
@@ -588,6 +589,24 @@ arrayprefix:
 			else
 				ERROR(&@2, "References are only allowed in "
 					    "arrays with 32-bit elements.");
+
+			$$.data = data_append_integer($1.data, val, $1.bits);
+		}
+	| arrayprefix DT_ORPHAN_PATH_REF
+		{
+			uint64_t val = ~0ULL >> (64 - $1.bits);
+
+			if ($1.bits == 32) {
+				if (!(last_header_flags & DTSF_ADDON))
+					ERROR(&@2, "Orphan path reference %s supported only in addon", $2);
+
+				$1.data = data_add_marker($1.data,
+							  REF_PHANDLE,
+							  $2);
+			} else {
+				ERROR(&@2, "References are only allowed in "
+					    "arrays with 32-bit elements.");
+			}
 
 			$$.data = data_append_integer($1.data, val, $1.bits);
 		}
