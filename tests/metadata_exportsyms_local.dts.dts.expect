@@ -1,0 +1,26 @@
+/dts-v1/;
+
+/ {
+
+	node-a {
+	};
+
+	node_b: node-b {
+		phandle = <0x03>;
+	};
+
+	node-c {
+
+		sub_node: sub-node {
+			phandle = <0x02>;
+		};
+	};
+
+	node_d: node-d {
+		phandle = <0x01>;
+
+		/export/ node_d: &node_d;
+		/export/ subnode_c: &sub_node;
+		/export/ node_b: &node_b;
+	};
+};

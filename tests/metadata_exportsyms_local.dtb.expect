@@ -1,0 +1,20 @@
+/dts-v1/;
+
+/ {
+    node-a {
+    };
+    node-b {
+        phandle = <0x00000003>;
+    };
+    node-c {
+        sub-node {
+            phandle = <0x00000002>;
+        };
+    };
+    node-d {
+        // [FDT_EXPORT_SYM] 'node_d' -> phandle 0x00000001
+        // [FDT_EXPORT_SYM] 'subnode_c' -> phandle 0x00000002
+        // [FDT_EXPORT_SYM] 'node_b' -> phandle 0x00000003
+        phandle = <0x00000001>;
+    };
+};
