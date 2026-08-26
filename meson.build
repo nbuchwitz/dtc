@@ -108,7 +108,7 @@ if get_option('tools') and not wheel_only
     install: true,
   )
 
-  foreach e: ['fdtdump', 'fdtget', 'fdtput', 'fdtoverlay']
+  foreach e: ['fdtdump', 'fdtget', 'fdtput', 'fdtoverlay', 'fdtaddon']
     dtc_tools += executable(e, files(e + '.c'), dependencies: util_dep, install: true)
   endforeach
 

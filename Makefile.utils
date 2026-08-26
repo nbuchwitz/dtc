@@ -29,3 +29,9 @@ FDTOVERLAY_SRCS = \
 	util.c
 
 FDTOVERLAY_OBJS = $(FDTOVERLAY_SRCS:%.c=%.o)
+
+FDTADDON_SRCS = \
+	fdtaddon.c \
+	util.c
+
+FDTADDON_OBJS = $(FDTADDON_SRCS:%.c=%.o)
