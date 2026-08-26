@@ -273,6 +273,9 @@ struct node {
 	for_each_child_withdel(n, c) \
 		if (!(c)->deleted)
 
+#define for_each_symbol(s0, s) \
+	for ((s) = (s0); (s); (s) = (s)->next)
+
 void add_label(struct label **labels, char *label);
 void delete_labels(struct label **labels);
 
@@ -281,6 +284,11 @@ struct property *build_property(const char *name, struct data val,
 struct property *build_property_delete(const char *name);
 struct property *chain_property(struct property *first, struct property *list);
 struct property *reverse_properties(struct property *first);
+
+struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle,
+			       struct srcpos *srcpos);
+struct symbol *chain_symbol(struct symbol *first, struct symbol *list);
+struct symbol *reverse_symbol(struct symbol *list);
 
 struct node *build_node(struct property *proplist, struct node *children,
 			struct symbol *exportsymlist, struct srcpos *srcpos);

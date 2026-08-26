@@ -36,6 +36,57 @@ void delete_labels(struct label **labels)
 		label->deleted = 1;
 }
 
+struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle,
+			       struct srcpos *srcpos)
+{
+	struct symbol *new = xmalloc(sizeof(*new));
+
+	memset(new, 0, sizeof(*new));
+
+	new->name = xstrdup(name);
+	new->ref = ref ? xstrdup(ref) : NULL;
+	new->phandle = phandle;
+	new->srcpos = srcpos_copy(srcpos);
+
+	return new;
+}
+
+struct symbol *chain_symbol(struct symbol *first, struct symbol *list)
+{
+	assert(first->next == NULL);
+
+	first->next = list;
+	return first;
+}
+
+struct symbol *reverse_symbol(struct symbol *list)
+{
+	struct symbol *p = list;
+	struct symbol *head = NULL;
+	struct symbol *next;
+
+	while (p) {
+		next = p->next;
+		p->next = head;
+		head = p;
+		p = next;
+	}
+	return head;
+}
+
+static void add_symbol(struct symbol **list, struct symbol *new)
+{
+	struct symbol **s;
+
+	new->next = NULL;
+
+	s = list;
+	while (*s)
+		s = &((*s)->next);
+
+	*s = new;
+}
+
 struct property *build_property(const char *name, struct data val,
 				struct srcpos *srcpos)
 {
@@ -144,6 +195,7 @@ struct node *merge_nodes(struct node *old_node, struct node *new_node)
 {
 	struct property *new_prop, *old_prop;
 	struct node *new_child, *old_child;
+	struct symbol *new_sym, *old_sym;
 	struct label *l;
 
 	old_node->deleted = 0;
@@ -215,6 +267,34 @@ struct node *merge_nodes(struct node *old_node, struct node *new_node)
 		/* if no collision occurred, add child to the old node. */
 		if (new_child)
 			add_child(old_node, new_child);
+	}
+
+	/* Merge exported symbols. If there is a collision, keep the new one */
+	while (new_node->exportsymlist) {
+		/* Pop the symbol off the list */
+		new_sym = new_node->exportsymlist;
+		new_node->exportsymlist = new_sym->next;
+		new_sym->next = NULL;
+
+		/* Look for a collision, set new value if there is */
+		for_each_symbol(old_node->exportsymlist, old_sym) {
+			if (streq(old_sym->name, new_sym->name)) {
+				old_sym->is_local = new_sym->is_local;
+				free(old_sym->ref);
+				old_sym->ref = new_sym->ref;
+				old_sym->phandle = new_sym->phandle;
+				old_sym->fullpath = new_sym->fullpath;
+				srcpos_free(old_sym->srcpos);
+				old_sym->srcpos = new_sym->srcpos;
+				free(new_sym);
+				new_sym = NULL;
+				break;
+			}
+		}
+
+		/* if no collision occurred, add symbol to the old node list. */
+		if (new_sym)
+			add_symbol(&old_node->exportsymlist, new_sym);
 	}
 
 	old_node->srcpos = srcpos_extend(old_node->srcpos, new_node->srcpos);

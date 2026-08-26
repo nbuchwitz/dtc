@@ -146,6 +146,12 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			return DT_OMIT_NO_REF;
 		}
 
+<*>"/export/" 	{
+			DPRINT("Keyword: /export/\n");
+			BEGIN_DEFAULT();
+			return DT_EXPORT;
+		}
+
 <*>{LABEL}:	{
 			DPRINT("Label: %s\n", yytext);
 			yylval.labelref = xstrdup(yytext);

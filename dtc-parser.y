@@ -46,6 +46,8 @@ static bool is_ref_relative(const char *ref)
 	struct property *proplist;
 	struct node *node;
 	struct node *nodelist;
+	struct symbol *symbol;
+	struct symbol *exportlist;
 	struct reserve_info *re;
 	uint64_t integer;
 	unsigned int flags;
@@ -60,6 +62,7 @@ static bool is_ref_relative(const char *ref)
 %token DT_DEL_PROP
 %token DT_DEL_NODE
 %token DT_OMIT_NO_REF
+%token DT_EXPORT
 %token <propnodename> DT_PROPNODENAME
 %token <integer> DT_LITERAL
 %token <integer> DT_CHAR_LITERAL
@@ -80,6 +83,8 @@ static bool is_ref_relative(const char *ref)
 %type <data> bytestring
 %type <prop> propdef
 %type <proplist> proplist
+%type <symbol> exportdef
+%type <exportlist> exportlist
 %type <labelref> dt_ref
 
 %type <node> devicetree
@@ -275,6 +280,49 @@ nodedef:
 	| '{' subnodes '}' ';'
 		{
 			$$ = build_node(NULL, $2, NULL, &@$);
+		}
+	| '{' proplist exportlist subnodes '}' ';'
+		{
+			/*
+			 * exportlist is created with chain_symbol() and so it
+			 * is created in reverse order. Reverse it now to have
+			 * it in correct order
+			 */
+			$$ = build_node($2, $4, reverse_symbol($3), &@$);
+		}
+	| '{' exportlist subnodes '}' ';'
+		{
+			/*
+			 * exportlist is created with chain_symbol() and so it
+			 * is created in reverse order. Reverse it now to have
+			 * it in correct order
+			 */
+			$$ = build_node(NULL, $3, reverse_symbol($2), &@$);
+		}
+	;
+
+exportlist:
+	  exportdef
+		{
+			$$ = chain_symbol($1, NULL);
+		}
+	| exportlist exportdef
+		{
+			$$ = chain_symbol($2, $1);
+		}
+	| exportlist propdef
+		{
+			ERROR(&@2, "Properties must precede exports");
+			YYERROR;
+		}
+	;
+
+exportdef:
+	DT_EXPORT DT_LABEL dt_ref ';'
+		{
+			$$ = build_exportsym($2, $3, 0, &@$);
+			free($2);
+			free($3);
 		}
 	;
 
@@ -574,6 +622,11 @@ subnodes:
 	| subnode propdef
 		{
 			ERROR(&@2, "Properties must precede subnodes");
+			YYERROR;
+		}
+	| subnode exportdef
+		{
+			ERROR(&@2, "Exports must precede subnodes");
 			YYERROR;
 		}
 	;
