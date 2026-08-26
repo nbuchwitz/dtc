@@ -17,6 +17,8 @@ treegen_dtb = custom_target(
     'unterminated_memrsv.dtb',
     'two_roots.dtb',
     'named_root.dtb',
+    'unknown_tags_can_skip.dtb',
+    'unknown_tags_no_skip.dtb',
   ]
 )
 

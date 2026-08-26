@@ -44,7 +44,7 @@ static const char *tagname(uint32_t tag)
 #define dumpf(fmt, args...) \
 	do { if (debug) printf("// " fmt, ## args); } while (0)
 
-static void dump_blob(void *blob, bool debug)
+static void dump_blob(void *blob, bool debug, int dump_unknown)
 {
 	uintptr_t blob_off = (uintptr_t)blob;
 	struct fdt_header *bph = blob;
@@ -146,20 +146,55 @@ static void dump_blob(void *blob, bool debug)
 			continue;
 		}
 
+		if ((tag & FDT_TAG_STRUCTURED) && (tag & FDT_TAG_SKIP_SAFE)) {
+			sz = 0;
+			switch (tag & FDT_TAG_DATA_MASK) {
+			case FDT_TAG_DATA_NONE:
+				break;
+			case FDT_TAG_DATA_1CELL:
+				sz = FDT_CELLSIZE;
+				break;
+			case FDT_TAG_DATA_2CELLS:
+				sz = 2 * FDT_CELLSIZE;
+				break;
+			case FDT_TAG_DATA_VARLEN:
+				/* Get the length */
+				sz = fdt32_to_cpu(GET_CELL(p));
+				break;
+			}
+
+			if (dump_unknown) {
+				printf("%*s// Unknown tag ignored: 0x%08"PRIx32", data len %d",
+				       depth * shift, "", tag, sz);
+				if (dump_unknown > 1 && sz != 0) {
+					printf(" ");
+					for (i = 0; i < sz; i++)
+						printf("%02hhx", *(p + i));
+				}
+				printf("\n");
+			}
+
+			/* Skip the data bytes */
+			p = PALIGN(p + sz, 4);
+			continue;
+		}
+
 		die("** Unknown tag 0x%08"PRIx32"\n", tag);
 	}
 }
 
 /* Usage related data. */
 static const char usage_synopsis[] = "fdtdump [options] <file>";
-static const char usage_short_opts[] = "ds" USAGE_COMMON_SHORT_OPTS;
+static const char usage_short_opts[] = "dus" USAGE_COMMON_SHORT_OPTS;
 static struct option const usage_long_opts[] = {
 	{"debug",            no_argument, NULL, 'd'},
+	{"unknown",          no_argument, NULL, 'u'},
 	{"scan",             no_argument, NULL, 's'},
 	USAGE_COMMON_LONG_OPTS
 };
 static const char * const usage_opts_help[] = {
 	"Dump debug information while decoding the file",
+	"Dump unknown tags information while decoding the file (-uu to dump data)",
 	"Scan for an embedded fdt in file",
 	USAGE_COMMON_OPTS_HELP
 };
@@ -183,6 +218,7 @@ int main(int argc, char *argv[])
 	const char *file;
 	char *buf;
 	bool debug = false;
+	int dump_unknown = 0;
 	bool scan = false;
 	size_t len;
 
@@ -197,6 +233,9 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			debug = true;
+			break;
+		case 'u':
+			dump_unknown++;
 			break;
 		case 's':
 			scan = true;
@@ -242,7 +281,7 @@ int main(int argc, char *argv[])
 	} else if (!valid_header(buf, len))
 		die("%s: header is not valid\n", file);
 
-	dump_blob(buf, debug);
+	dump_blob(buf, debug, dump_unknown);
 
 	return 0;
 }

@@ -707,6 +707,166 @@ static struct buf make_named_root(void)
 	return b;
 }
 
+/* Tree with "unknown" tags that can be skipped
+ * Use a really future dtb version to check version downgrade on
+ * modification.
+ */
+static struct buf make_unknown_tags_can_skip(void)
+{
+	struct buf b = buf_init();
+	size_t hdr;
+	size_t p_int, p_str;
+	size_t p_sn1_int;
+	size_t p_sn2_int1, p_sn2_int2;
+	size_t p_sn2ssn_bool;
+
+	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10);
+	emit_align(&b, 8);
+
+	emit_rsvmap_empty(&b, hdr);
+
+	{
+		size_t ss = start_block(&b);
+
+		emit_u32(&b, FDT_TEST_1CELL_CAN_SKIP);
+		emit_u32(&b, 0x1);
+
+		emit_begin_node(&b, "");
+			emit_u32(&b, FDT_TEST_NONE_CAN_SKIP);
+
+			p_int = emit_prop_u32(&b, 0, 0x3201);
+
+			emit_u32(&b, FDT_TEST_1CELL_CAN_SKIP);
+			emit_u32(&b, 0x110);
+
+			p_str = emit_prop_str(&b, 0, "abcd");
+
+			emit_u32(&b, FDT_TEST_2CELLS_CAN_SKIP);
+			emit_u32(&b, 0x120);
+			emit_u32(&b, 0x121);
+
+			emit_u32(&b, FDT_TEST_VARLEN_CAN_SKIP);
+			emit_u32(&b, 3);
+			emit_bytes(&b, (const uint8_t []){0x10, 0x11, 0x12}, 3);
+			emit_align(&b, FDT_TAGSIZE);
+
+			emit_begin_node(&b, "subnode1");
+				p_sn1_int = emit_prop_u64(&b, 0, 0x640100006402);
+				emit_u32(&b, FDT_TEST_NONE_CAN_SKIP);
+			emit_end_node(&b);
+
+			emit_begin_node(&b, "subnode2");
+				emit_u32(&b, FDT_TEST_1CELL_CAN_SKIP);
+				emit_u32(&b, 0x121);
+
+				p_sn2_int1 = emit_prop_u64(&b, 0, 0x6402000064021);
+
+				emit_u32(&b, FDT_TEST_2CELLS_CAN_SKIP);
+				emit_u32(&b, 0x1220);
+				emit_u32(&b, 0x1221);
+
+				p_sn2_int2 = emit_prop_u32(&b, 0, 0x32022);
+
+				emit_begin_node(&b, "subsubnode");
+					emit_u32(&b, FDT_TEST_2CELLS_CAN_SKIP);
+					emit_u32(&b, 0x1230);
+					emit_u32(&b, 0x1231);
+					p_sn2ssn_bool = emit_prop_nil(&b, 0);
+				emit_end_node(&b);
+
+				emit_u32(&b, FDT_TEST_VARLEN_CAN_SKIP);
+				emit_u32(&b, 3);
+				emit_bytes(&b, (const uint8_t []){0x21, 0x22, 0x23}, 3);
+				emit_align(&b, FDT_TAGSIZE);
+			emit_end_node(&b);
+
+			emit_u32(&b, FDT_TEST_VARLEN_CAN_SKIP);
+			emit_u32(&b, 4);
+			emit_bytes(&b, (const uint8_t []){0x31, 0x32, 0x33, 0x34}, 4);
+			emit_align(&b, FDT_TAGSIZE);
+		emit_end_node(&b);
+
+		emit_u32(&b, FDT_TEST_1CELL_CAN_SKIP);
+		emit_u32(&b, 0x2);
+
+		emit_u32(&b, FDT_TEST_VARLEN_CAN_SKIP);
+		emit_u32(&b, 2);
+		emit_bytes(&b, (const uint8_t []){0x40, 0x41}, 2);
+		emit_align(&b, FDT_TAGSIZE);
+
+		emit_fdt_end(&b);
+		finish_struct_block(&b, hdr, ss);
+	}
+
+	{
+		size_t strs = start_block(&b);
+		size_t s;
+
+		s = emit_string(&b, "prop-int");
+		fill_prop_name(&b, strs, p_int, s);
+		fill_prop_name(&b, strs, p_sn1_int, s);
+
+		s = emit_string(&b, "prop-str");
+		fill_prop_name(&b, strs, p_str, s);
+
+		s = emit_string(&b, "prop-int1");
+		fill_prop_name(&b, strs, p_sn2_int1, s);
+
+		s = emit_string(&b, "prop-int2");
+		fill_prop_name(&b, strs, p_sn2_int2, s);
+
+		s = emit_string(&b, "prop-bool");
+		fill_prop_name(&b, strs, p_sn2ssn_bool, s);
+
+		finish_strings_block(&b, hdr, strs);
+	}
+
+	finish_totalsize(&b, hdr);
+
+	return b;
+}
+
+/* Tree with "unknown" tags that cannot be skipped */
+static struct buf make_unknown_tags_no_skip(void)
+{
+	struct buf b = buf_init();
+	size_t hdr;
+	size_t p_prop_u64;
+
+	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10);
+	emit_align(&b, 8);
+
+	emit_rsvmap_empty(&b, hdr);
+
+	{
+		size_t ss = start_block(&b);
+
+		emit_begin_node(&b, "");
+			emit_u32(&b, FDT_TEST_NONE_NO_SKIP);
+
+			emit_begin_node(&b, "subnode1");
+				p_prop_u64 = emit_prop_u64(&b, 0, 0x100000002);
+			emit_end_node(&b);
+		emit_end_node(&b);
+		emit_fdt_end(&b);
+		finish_struct_block(&b, hdr, ss);
+	}
+
+	{
+		size_t strs = start_block(&b);
+		size_t s;
+
+		s = emit_string(&b, "prop-int");
+		fill_prop_name(&b, strs, p_prop_u64, s);
+
+		finish_strings_block(&b, hdr, strs);
+	}
+
+	finish_totalsize(&b, hdr);
+
+	return b;
+}
+
 /* Tree table and main */
 
 static struct {
@@ -722,6 +882,8 @@ static struct {
 	TREE(unterminated_memrsv),
 	TREE(two_roots),
 	TREE(named_root),
+	TREE(unknown_tags_can_skip),
+	TREE(unknown_tags_no_skip),
 };
 
 int main(int argc, char *argv[])
