@@ -32,6 +32,11 @@ static bool is_ref_relative(const char *ref)
 	return ref[0] != '/' && strchr(&ref[1], '/');
 }
 
+static bool is_ref_namespace(const char *ref)
+{
+	return strchr(ref, '.');
+}
+
 static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanlist,
 					   const char *ref)
 {
@@ -110,6 +115,7 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 %token <data> DT_STRING
 %token <labelref> DT_LABEL
 %token <labelref> DT_LABEL_REF
+%token <labelref> DT_LABEL_NAMESPACE_REF
 %token <labelref> DT_PATH_REF
 %token <labelref> DT_ORPHAN_PATH_REF
 %token DT_INCBIN
@@ -260,7 +266,7 @@ importdef:
 		}
 	;
 
-dt_ref: DT_LABEL_REF | DT_PATH_REF;
+dt_ref: DT_LABEL_REF | DT_PATH_REF | DT_LABEL_NAMESPACE_REF;
 
 devicetree:
 	  '/' nodedef
@@ -281,6 +287,9 @@ devicetree:
 			else if (is_ref_relative($1))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin nor addon", $1);
 
+			if (!(last_header_flags & DTSF_ADDON) && is_ref_namespace($1))
+				ERROR(&@2, "Namespaced label reference %s supported only in addon", $1);
+
 			if (last_header_flags & DTSF_PLUGIN) {
 				$$ = plugin_add_orphan_node(
 						name_node(build_node(NULL, NULL, NULL, NULL),
@@ -299,6 +308,10 @@ devicetree:
 
 			if ((last_header_flags & (DTSF_PLUGIN | DTSF_ADDON)) && is_ref_relative($3))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin nor addon", $3);
+
+			if (!(last_header_flags & DTSF_ADDON) && is_ref_namespace($3))
+				ERROR(&@2, "Namespaced label reference %s supported only in addon", $3);
+
 
 			if (target) {
 				add_label(&target->labels, $2);
@@ -339,6 +352,25 @@ devicetree:
 				if (last_header_flags & DTSF_PLUGIN)
 					plugin_add_orphan_node($1, $3, $2);
 				else if (last_header_flags & DTSF_ADDON)
+					addon_add_orphan_node(&parser_orphanlist,
+							      orphan_node($3, $2));
+				else
+					ERROR(&@2, "Label or path %s not found", $2);
+			}
+			$$ = $1;
+		}
+	| devicetree DT_LABEL_NAMESPACE_REF nodedef
+		{
+			struct node *target = parser_get_node_by_ref(
+						$1, parser_orphanlist, $2);
+
+			if (!(last_header_flags & DTSF_ADDON))
+				ERROR(&@2, "Namespaced label reference %s supported only in addon", $2);
+
+			if (target) {
+				merge_nodes(target, $3);
+			} else {
+				if (last_header_flags & DTSF_ADDON)
 					addon_add_orphan_node(&parser_orphanlist,
 							      orphan_node($3, $2));
 				else
@@ -422,6 +454,10 @@ exportlist:
 exportdef:
 	DT_EXPORT DT_LABEL dt_ref ';'
 		{
+			/* Only an addon can use namespaced labels references */
+			if (!(last_header_flags & DTSF_ADDON) && is_ref_namespace($3))
+				ERROR(&@2, "Namespaced label reference %s supported only in addon", $3);
+
 			$$ = build_exportsym($2, $3, 0, &@$);
 			free($2);
 			free($3);
@@ -477,6 +513,9 @@ propdata:
 		}
 	| propdataprefix dt_ref
 		{
+			if (!(last_header_flags & DTSF_ADDON) && is_ref_namespace($2))
+				ERROR(&@2, "Namespaced label reference %s supported only in addon", $2);
+
 			$1 = data_add_marker($1, TYPE_STRING, $2);
 			$$ = data_add_marker($1, REF_PATH, $2);
 		}
@@ -582,13 +621,17 @@ arrayprefix:
 		{
 			uint64_t val = ~0ULL >> (64 - $1.bits);
 
-			if ($1.bits == 32)
+			if ($1.bits == 32) {
+				if (!(last_header_flags & DTSF_ADDON) && is_ref_namespace($2))
+					ERROR(&@2, "Namespaced label reference %s supported only in addon", $2);
+
 				$1.data = data_add_marker($1.data,
 							  REF_PHANDLE,
 							  $2);
-			else
+			} else {
 				ERROR(&@2, "References are only allowed in "
 					    "arrays with 32-bit elements.");
+			}
 
 			$$.data = data_append_integer($1.data, val, $1.bits);
 		}

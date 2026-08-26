@@ -229,6 +229,12 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			return DT_LABEL_REF;
 		}
 
+<*>\&{LABEL}(\.{LABEL})+	{	/* namespace label reference */
+			DPRINT("Ref namespace: %s\n", yytext+1);
+			yylval.labelref = xstrdup(yytext+1);
+			return DT_LABEL_NAMESPACE_REF;
+		}
+
 <*>"&{"{PATHCHAR}*\}	{	/* new-style path reference */
 			yytext[yyleng-1] = '\0';
 			DPRINT("Ref: %s\n", yytext+2);
@@ -239,6 +245,13 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 <*>"&{\$"{LABEL}([/]{PATHCHAR}*)?\}  {	/* orphan path reference */
 			yytext[yyleng-1] = '\0';
 			DPRINT("Ref orphan path: %s\n", yytext+1);
+			yylval.labelref = xstrdup(yytext+2);
+			return DT_ORPHAN_PATH_REF;
+		}
+
+<*>"&{\$"{LABEL}(\.{LABEL})+([/]{PATHCHAR}*)?\}  {	/* orphan path reference */
+			yytext[yyleng-1] = '\0';
+			DPRINT("Ref (namespace) orphan path: %s\n", yytext+1);
 			yylval.labelref = xstrdup(yytext+2);
 			return DT_ORPHAN_PATH_REF;
 		}
