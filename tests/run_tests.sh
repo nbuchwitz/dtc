@@ -1322,6 +1322,18 @@ fdtaddon_tests() {
 		run_dtc_test -I dtb -O dts -o $dt-merged2.dtb.dts $dt-merged2.dtb
 		check_dts $dt-merged2.dtb.dts
 	done
+
+	# Test addon with exact same properties as ones available in the base tree
+	run_dtc_test -I dts -O dtb -o fdtaddon_base_prop_existing.dtb "$SRCDIR/fdtaddon_base_prop_existing.dts"
+	check_dtb fdtaddon_base_prop_existing.dtb
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_addon_prop_existing_ok.dtba "$SRCDIR/fdtaddon_addon_prop_existing_ok.dtsa"
+	check_dtb fdtaddon_addon_prop_existing_ok.dtba
+
+	run_fdtaddon_test -i fdtaddon_base_prop_existing.dtb -o fdtaddon_addon_prop_existing_ok-merged.dtb \
+			  -t "/base-node" fdtaddon_addon_prop_existing_ok.dtba
+	check_dtb fdtaddon_addon_prop_existing_ok-merged.dtb
+
 }
 
 pylibfdt_tests () {

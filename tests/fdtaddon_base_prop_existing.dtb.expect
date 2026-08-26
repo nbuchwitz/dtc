@@ -1,0 +1,17 @@
+/dts-v1/;
+
+/ {
+    base-node {
+        // [FDT_EXPORT_SYM] 'base' -> phandle 0x00000001
+        compatible = "abc,base";
+        exist_bool;
+        exist_int = <0x0000007b>;
+        exist_string = "abcdef";
+        phandle = <0x00000001>;
+        sub-node {
+            sub_exist_bool;
+            sub_exist_int = <0x000001c8>;
+            sub_exist_string = "ghi";
+        };
+    };
+};
