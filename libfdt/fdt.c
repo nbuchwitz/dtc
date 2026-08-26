@@ -252,13 +252,48 @@ int fdt_check_prop_offset_(const void *fdt, int offset)
 	return offset;
 }
 
-int fdt_next_node(const void *fdt, int offset, int *depth)
+int fdt_root_offset(const void *fdt)
 {
 	int nextoffset = 0;
+	int offset;
 	uint32_t tag;
 
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag(fdt, offset, &nextoffset);
+		switch (tag) {
+		case FDT_END_NODE:
+		case FDT_PROP:
+			return -FDT_ERR_BADSTRUCTURE;
+
+		case FDT_BEGIN_NODE:
+			return offset;
+
+		default:
+			break;
+		}
+	} while (tag != FDT_END);
+
+	return (nextoffset < 0) ? nextoffset : -FDT_ERR_NOTFOUND;
+}
+
+int fdt_next_node(const void *fdt, int offset, int *depth)
+{
+	int nextoffset = offset;
+	uint32_t tag;
+
+	/*
+	 * Get the root node if asked for next node from the root node
+	 * (offset == 0) or if the given offset is not valid (negative).
+	 */
+	if (offset <= 0) {
+		nextoffset = fdt_root_offset(fdt);
+		if (nextoffset < 0)
+			return nextoffset;
+	}
+
 	if (offset >= 0)
-		if ((nextoffset = fdt_check_node_offset_(fdt, offset)) < 0)
+		if ((nextoffset = fdt_check_node_offset_(fdt, nextoffset)) < 0)
 			return nextoffset;
 
 	do {

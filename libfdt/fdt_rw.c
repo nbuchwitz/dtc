@@ -226,6 +226,12 @@ static int fdt_add_property_(void *fdt, int nodeoffset, const char *name,
 	int err;
 	int allocated;
 
+	if (!nodeoffset) {
+		nodeoffset = fdt_root_offset(fdt);
+		if (nodeoffset < 0)
+			return nodeoffset;
+	}
+
 	if ((nextoffset = fdt_check_node_offset_(fdt, nodeoffset)) < 0)
 		return nextoffset;
 
@@ -376,6 +382,12 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 	fdt32_t *endtag;
 
 	FDT_RW_PROBE(fdt);
+
+	if (!parentoffset) {
+		parentoffset = fdt_root_offset(fdt);
+		if (parentoffset < 0)
+			return parentoffset;
+	}
 
 	offset = fdt_subnode_offset_namelen(fdt, parentoffset, name, namelen);
 	if (offset >= 0)

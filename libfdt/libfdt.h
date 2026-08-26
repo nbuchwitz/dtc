@@ -504,6 +504,19 @@ int fdt_num_mem_rsv(const void *fdt);
 int fdt_get_mem_rsv(const void *fdt, int n, uint64_t *address, uint64_t *size);
 
 /**
+ * fdt_root_offset - Get the offset of the root node
+ * @fdt: pointer to the device tree blob
+ *
+ * The root node can be located after the offset 0. Indeed FDT_NOP tags can be
+ * present at offset 0. fdt_root_offset() takes care of those possible FDT_NOP
+ * tags.
+ *
+ * returns: offset of the root node or negative libfdt error value otherwise
+ */
+int fdt_root_offset(const void *fdt);
+
+
+/**
  * fdt_subnode_offset_namelen - find a subnode based on substring
  * @fdt: pointer to the device tree blob
  * @parentoffset: structure block offset of a node
@@ -1025,7 +1038,7 @@ int fdt_get_path(const void *fdt, int nodeoffset, char *buf, int buflen);
  * at a specific depth from the root (where the root itself has depth
  * 0, its immediate subnodes depth 1 and so forth).  So
  *	fdt_supernode_atdepth_offset(fdt, nodeoffset, 0, NULL);
- * will always return 0, the offset of the root node.  If the node at
+ * will always return the offset of the root node.  If the node at
  * nodeoffset has depth D, then:
  *	fdt_supernode_atdepth_offset(fdt, nodeoffset, D, NULL);
  * will return nodeoffset itself.

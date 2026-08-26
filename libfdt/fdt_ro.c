@@ -231,6 +231,12 @@ int fdt_subnode_offset_namelen(const void *fdt, int offset,
 
 	FDT_RO_PROBE(fdt);
 
+	if (!offset) {
+		offset = fdt_root_offset(fdt);
+		if (offset < 0)
+			return offset;
+	}
+
 	for (depth = 0;
 	     (offset >= 0) && (depth >= 0);
 	     offset = fdt_next_node(fdt, offset, &depth))
@@ -253,12 +259,16 @@ int fdt_path_offset_namelen(const void *fdt, const char *path, int namelen)
 {
 	const char *end = path + namelen;
 	const char *p = path;
-	int offset = 0;
+	int offset;
 
 	FDT_RO_PROBE(fdt);
 
 	if (!can_assume(VALID_INPUT) && namelen <= 0)
 		return -FDT_ERR_BADPATH;
+
+	offset = fdt_root_offset(fdt);
+	if (offset < 0)
+		return offset;
 
 	/* see if we have an alias */
 	if (*path != '/') {
@@ -304,14 +314,24 @@ int fdt_path_offset(const void *fdt, const char *path)
 
 const char *fdt_get_name(const void *fdt, int nodeoffset, int *len)
 {
-	const struct fdt_node_header *nh = fdt_offset_ptr_(fdt, nodeoffset);
+	const struct fdt_node_header *nh;
 	const char *nameptr;
 	int err;
+
+	if (!nodeoffset) {
+		nodeoffset = fdt_root_offset(fdt);
+		if (nodeoffset < 0) {
+			err = nodeoffset;
+			goto fail;
+		}
+	}
+
 
 	if (!can_assume(VALID_DTB) && (((err = fdt_ro_probe_(fdt)) < 0)
 	    || ((err = fdt_check_node_offset_(fdt, nodeoffset)) < 0)))
 			goto fail;
 
+	nh = fdt_offset_ptr_(fdt, nodeoffset);
 	nameptr = nh->name;
 
 	if (!can_assume(LATEST) && fdt_version(fdt) < 0x10) {
@@ -343,6 +363,12 @@ const char *fdt_get_name(const void *fdt, int nodeoffset, int *len)
 int fdt_first_property_offset(const void *fdt, int nodeoffset)
 {
 	int offset;
+
+	if (!nodeoffset) {
+		nodeoffset = fdt_root_offset(fdt);
+		if (nodeoffset < 0)
+			return nodeoffset;
+	}
 
 	if ((offset = fdt_check_node_offset_(fdt, nodeoffset)) < 0)
 		return offset;
@@ -581,7 +607,7 @@ int fdt_get_path(const void *fdt, int nodeoffset, char *buf, int buflen)
 	if (buflen < 2)
 		return -FDT_ERR_NOSPACE;
 
-	for (offset = 0, depth = 0;
+	for (offset = fdt_root_offset(fdt), depth = 0;
 	     (offset >= 0) && (offset <= nodeoffset);
 	     offset = fdt_next_node(fdt, offset, &depth)) {
 		while (pdepth > depth) {
@@ -619,7 +645,7 @@ int fdt_get_path(const void *fdt, int nodeoffset, char *buf, int buflen)
 	else if (offset == -FDT_ERR_BADOFFSET)
 		return -FDT_ERR_BADSTRUCTURE;
 
-	return offset; /* error from fdt_next_node() */
+	return offset; /* error from fdt_next_node() or fdt_root_offset() */
 }
 
 int fdt_supernode_atdepth_offset(const void *fdt, int nodeoffset,
@@ -627,13 +653,21 @@ int fdt_supernode_atdepth_offset(const void *fdt, int nodeoffset,
 {
 	int offset, depth;
 	int supernodeoffset = -FDT_ERR_INTERNAL;
+	int root_offset;
 
 	FDT_RO_PROBE(fdt);
 
 	if (supernodedepth < 0)
 		return -FDT_ERR_NOTFOUND;
 
-	for (offset = 0, depth = 0;
+	root_offset = fdt_root_offset(fdt);
+	if (root_offset < 0)
+		return root_offset;
+
+	if (!nodeoffset)
+		nodeoffset = root_offset;
+
+	for (offset = root_offset, depth = 0;
 	     (offset >= 0) && (offset <= nodeoffset);
 	     offset = fdt_next_node(fdt, offset, &depth)) {
 		if (depth == supernodedepth)
@@ -663,12 +697,15 @@ int fdt_supernode_atdepth_offset(const void *fdt, int nodeoffset,
 int fdt_node_depth(const void *fdt, int nodeoffset)
 {
 	int nodedepth;
-	int err;
+	int offset;
 
-	err = fdt_supernode_atdepth_offset(fdt, nodeoffset, 0, &nodedepth);
-	if (err)
-		return (can_assume(LIBFDT_FLAWLESS) || err < 0) ? err :
-			-FDT_ERR_INTERNAL;
+	offset = fdt_supernode_atdepth_offset(fdt, nodeoffset, 0, &nodedepth);
+	if (offset < 0)
+		return offset;
+
+	if (!can_assume(LIBFDT_FLAWLESS) && offset != fdt_root_offset(fdt))
+		return -FDT_ERR_INTERNAL;
+
 	return nodedepth;
 }
 
