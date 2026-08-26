@@ -1,0 +1,70 @@
+/dts-v1/;
+
+/ {
+
+	base-node {
+
+		sub-node {
+			prop = <0x00>;
+			phandle = <0x02>;
+
+			addon2-node-base-other {
+				ref = <&{/somewhere/node-a1/addon1-node/sub-node-stack1/addon2-node}>;
+				prop = <0x01>;
+			};
+		};
+	};
+
+	somewhere {
+
+		node-a1 {
+			compatible = "abc,aaa";
+			phandle = <0x01>;
+
+			/export/ node_a: &{/somewhere/node-a1};
+			/export/ other: &{/base-node/sub-node};
+
+			addon1-node {
+				ref-other = <&{/base-node/sub-node} 0x0a>;
+				prop = <0x00>;
+
+				sub-node-other {
+					phandle = <0x05>;
+					prop = <0x01>;
+
+					addon2-node-other {
+						prop = <&{/base-node/sub-node}>;
+
+						addon2-subnode {
+							prop = <0x02>;
+						};
+					};
+				};
+
+				sub-node-stack1 {
+					phandle = <0x04>;
+					prop = <0x00>;
+					compatible = "abc,bbb";
+
+					/export/ stack: &{/somewhere/node-a1/addon1-node/sub-node-stack1};
+					/export/ base_other: &{/base-node/sub-node};
+					/export/ other: &{/somewhere/node-a1/addon1-node/sub-node-other};
+
+					addon2-node {
+						phandle = <0x06>;
+						ref-other = <&{/somewhere/node-a1/addon1-node/sub-node-other} 0x0a>;
+						prop = <0x00>;
+					};
+				};
+			};
+		};
+
+		node-a2 {
+			compatible = "abc,aaa";
+			phandle = <0x03>;
+
+			/export/ node_a: &{/somewhere/node-a2};
+			/export/ other: &{/base-node/sub-node};
+		};
+	};
+};

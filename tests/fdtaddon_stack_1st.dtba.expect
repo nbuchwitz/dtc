@@ -1,0 +1,24 @@
+/dts-v1/;
+/addon/;
+
+// [FDT_IMPORT_SYM] 'node_a' (abc,aaa)
+// [FDT_IMPORT_SYM] 'other' ()
+&node_a {
+    addon1-node {
+        prop = <0x00000000>;
+        ref-other = <0xffffffff 0x0000000a>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref-other[0], ref = other
+        sub-node-stack1 {
+            // [FDT_EXPORT_SYM] 'stack' -> phandle 0x00000001
+            // [FDT_EXPORT_SYM_REF] 'base_other' -> 'other'
+            // [FDT_EXPORT_SYM] 'other' -> phandle 0x00000002
+            compatible = "abc,bbb";
+            prop = <0x00000000>;
+            phandle = <0x00000001>;
+        };
+        sub-node-other {
+            prop = <0x00000001>;
+            phandle = <0x00000002>;
+        };
+    };
+};

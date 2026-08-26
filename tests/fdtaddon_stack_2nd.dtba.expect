@@ -1,0 +1,30 @@
+/dts-v1/;
+/addon/;
+
+// [FDT_IMPORT_SYM] 'stack' (abc,bbb)
+// [FDT_IMPORT_SYM] 'other' ()
+// [FDT_IMPORT_SYM] 'base_other' ()
+&stack {
+    addon2-node {
+        prop = <0x00000000>;
+        ref-other = <0xffffffff 0x0000000a>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref-other[0], ref = other
+        phandle = <0x00000001>;
+    };
+};
+&other {
+    addon2-node-other {
+        prop = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] prop[0], ref = base_other
+        addon2-subnode {
+            prop = <0x00000002>;
+        };
+    };
+};
+&base_other {
+    addon2-node-base-other {
+        prop = <0x00000001>;
+        ref = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref[0]
+    };
+};

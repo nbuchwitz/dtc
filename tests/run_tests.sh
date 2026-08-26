@@ -1347,6 +1347,27 @@ fdtaddon_tests() {
 
 	run_dtc_test -I dtb -O dts -o fdtaddon_addon_namespace-merged.dtb.dts fdtaddon_addon_namespace-merged.dtb
 	check_dts fdtaddon_addon_namespace-merged.dtb.dts
+
+	# test stacked addons
+	run_dtc_test -I dts -O dtb -o fdtaddon_stack_1st.dtba "$SRCDIR/fdtaddon_stack_1st.dtsa"
+	check_dtb fdtaddon_stack_1st.dtba
+
+	run_fdtaddon_test -i fdtaddon_base.dtb -o fdtaddon_stack_1st-merged.dtb \
+			  -t "/somewhere/node-a1" fdtaddon_stack_1st.dtba
+	check_dtb fdtaddon_stack_1st-merged.dtb
+
+	run_dtc_test -I dtb -O dts -o fdtaddon_stack_1st-merged.dtb.dts fdtaddon_stack_1st-merged.dtb
+	check_dts fdtaddon_stack_1st-merged.dtb.dts
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_stack_2nd.dtba "$SRCDIR/fdtaddon_stack_2nd.dtsa"
+	check_dtb fdtaddon_stack_2nd.dtba
+
+	run_fdtaddon_test -i fdtaddon_stack_1st-merged.dtb -o fdtaddon_stack_2nd-merged.dtb \
+			  -t "/somewhere/node-a1/addon1-node/sub-node-stack1" fdtaddon_stack_2nd.dtba
+	check_dtb fdtaddon_stack_2nd-merged.dtb
+
+	run_dtc_test -I dtb -O dts -o fdtaddon_stack_2nd-merged.dtb.dts fdtaddon_stack_2nd-merged.dtb
+	check_dts fdtaddon_stack_2nd-merged.dtb.dts
 }
 
 pylibfdt_tests () {
