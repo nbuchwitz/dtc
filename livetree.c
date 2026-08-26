@@ -628,16 +628,35 @@ struct node *get_node_by_label(struct node *tree, const char *label)
 	return NULL;
 }
 
+static cell_t get_node_phandle_existing(struct node *node)
+{
+	struct property *prop;
+
+	if (phandle_is_valid(node->phandle))
+		return node->phandle;
+
+	prop = get_property(node, "phandle");
+	if (!prop) {
+		prop = get_property(node, "linux,phandle");
+		if (!prop)
+			return 0;
+	}
+
+	return propval_cell(prop);
+}
+
 struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
 {
 	struct node *child, *node;
+	cell_t tree_phandle;
 
 	if (!phandle_is_valid(phandle)) {
 		assert(generate_fixups);
 		return NULL;
 	}
 
-	if (tree->phandle == phandle) {
+	tree_phandle = get_node_phandle_existing(tree);
+	if (phandle_is_valid(tree_phandle) && tree_phandle == phandle) {
 		if (tree->deleted)
 			return NULL;
 		return tree;
