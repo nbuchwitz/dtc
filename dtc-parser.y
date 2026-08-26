@@ -183,7 +183,7 @@ devicetree:
 			else if (is_ref_relative($1))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $1);
 			$$ = add_orphan_node(
-					name_node(build_node(NULL, NULL, NULL),
+					name_node(build_node(NULL, NULL, NULL, NULL),
 						  ""),
 					$2, $1);
 		}
@@ -270,11 +270,11 @@ devicetree:
 nodedef:
 	  '{' proplist subnodes '}' ';'
 		{
-			$$ = build_node($2, $3, &@$);
+			$$ = build_node($2, $3, NULL, &@$);
 		}
 	| '{' subnodes '}' ';'
 		{
-			$$ = build_node(NULL, $2, &@$);
+			$$ = build_node(NULL, $2, NULL, &@$);
 		}
 	;
 

@@ -204,6 +204,16 @@ struct label {
 	struct label *next;
 };
 
+struct symbol {
+	bool is_local;
+	char *name;
+	char *ref;
+	cell_t phandle;
+	char *fullpath;
+	struct symbol *next;
+	struct srcpos *srcpos;
+};
+
 struct bus_type {
 	const char *name;
 };
@@ -224,6 +234,7 @@ struct node {
 	char *name;
 	struct property *proplist;
 	struct node *children;
+	struct symbol *exportsymlist;
 
 	struct node *parent;
 	struct node *next_sibling;
@@ -272,7 +283,7 @@ struct property *chain_property(struct property *first, struct property *list);
 struct property *reverse_properties(struct property *first);
 
 struct node *build_node(struct property *proplist, struct node *children,
-			struct srcpos *srcpos);
+			struct symbol *exportsymlist, struct srcpos *srcpos);
 struct node *build_node_delete(struct srcpos *srcpos);
 struct node *name_node(struct node *node, const char *name);
 struct node *omit_node_if_unused(struct node *node);

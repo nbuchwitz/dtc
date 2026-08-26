@@ -86,7 +86,7 @@ struct property *reverse_properties(struct property *first)
 }
 
 struct node *build_node(struct property *proplist, struct node *children,
-			struct srcpos *srcpos)
+			struct symbol *exportsymlist, struct srcpos *srcpos)
 {
 	struct node *new = xmalloc(sizeof(*new));
 	struct node *child;
@@ -95,6 +95,7 @@ struct node *build_node(struct property *proplist, struct node *children,
 
 	new->proplist = reverse_properties(proplist);
 	new->children = children;
+	new->exportsymlist = exportsymlist;
 	new->srcpos = srcpos_copy(srcpos);
 
 	for_each_child(new, child) {
@@ -248,7 +249,7 @@ struct node * add_orphan_node(struct node *dt, struct node *new_node, char *ref)
 	xasprintf(&name, "fragment@%u",
 			next_orphan_fragment++);
 	name_node(new_node, "__overlay__");
-	node = build_node(p, new_node, NULL);
+	node = build_node(p, new_node, NULL, NULL);
 	name_node(node, name);
 	free(name);
 
@@ -993,7 +994,7 @@ static struct node *build_and_name_child_node(struct node *parent, const char *n
 {
 	struct node *node;
 
-	node = build_node(NULL, NULL, NULL);
+	node = build_node(NULL, NULL, NULL, NULL);
 	name_node(node, name);
 	add_child(parent, node);
 
