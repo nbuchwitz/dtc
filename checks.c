@@ -452,7 +452,7 @@ static void check_duplicate_label(struct check *c, struct dt_info *dti,
 	struct property *otherprop = NULL;
 	struct marker *othermark = NULL;
 
-	othernode = get_node_by_label(dt, label);
+	othernode = get_node_by_label(dti, label);
 
 	if (!othernode)
 		otherprop = get_property_by_label(dt, label, &othernode);

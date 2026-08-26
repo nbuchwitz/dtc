@@ -797,7 +797,7 @@ static struct node *get_node_by_path_(struct node *tree, const char *path)
 	return NULL;
 }
 
-struct node *get_node_by_label(struct node *tree, const char *label)
+static struct node *get_node_by_label_(struct node *tree, const char *label)
 {
 	struct node *child, *node;
 	struct label *l;
@@ -809,7 +809,7 @@ struct node *get_node_by_label(struct node *tree, const char *label)
 			return tree;
 
 	for_each_child(tree, child) {
-		node = get_node_by_label(child, label);
+		node = get_node_by_label_(child, label);
 		if (node)
 			return node;
 	}
@@ -883,7 +883,7 @@ struct node *get_node_by_ref(struct node *tree, const char *ref)
 			path = slash + 1;
 		}
 
-		target = get_node_by_label(tree, label);
+		target = get_node_by_label_(tree, label);
 
 		free(buf);
 
@@ -901,6 +901,19 @@ struct node *get_node_by_path(struct dt_info *dti, const char *path)
 {
 	if (dti->dt)
 		return get_node_by_path_(dti->dt, path);
+
+	return NULL;
+}
+
+struct node *get_node_by_label(struct dt_info *dti, const char *label)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_label_(dti->dt, label);
+		if (node)
+			return node;
+	}
 
 	return NULL;
 }
