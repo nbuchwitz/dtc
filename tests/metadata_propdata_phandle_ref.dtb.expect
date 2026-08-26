@@ -1,0 +1,16 @@
+/dts-v1/;
+
+/ {
+    fragment@0 {
+        target = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] target[0], ref = test
+        __overlay__ {
+            ref = <0xffffffff>;
+            // [FDT_PROPDATA_PHANDLE_REF] ref[0], ref = node_a
+        };
+    };
+    __fixups__ {
+        test = "/fragment@0:target:0";
+        node_a = "/fragment@0/__overlay__:ref:0";
+    };
+};

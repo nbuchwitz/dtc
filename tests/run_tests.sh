@@ -1240,7 +1240,7 @@ fdtoverlay_tests() {
 }
 
 metadata_tests() {
-	for dt in metadata_propdata_phandle_local; do
+	for dt in metadata_propdata_phandle_local metadata_propdata_phandle_ref; do
 		run_dtc_test -I dts -O dts -o $dt.dts.dts "$SRCDIR/$dt.dts"
 		base_run_test check_diff $dt.dts.dts "$SRCDIR/$dt.dts.dts.expect"
 		run_dtc_test -I dts -O dtb -o $dt.dtb "$SRCDIR/$dt.dts"

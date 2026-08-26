@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+
+	fragment@0 {
+		target = <&test>;
+
+		__overlay__ {
+			ref = <&node_a>;
+		};
+	};
+
+	__fixups__ {
+		test = "/fragment@0:target:0";
+		node_a = "/fragment@0/__overlay__:ref:0";
+	};
+};
