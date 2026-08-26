@@ -1,0 +1,22 @@
+/dts-v1/;
+/addon/;
+
+
+&base1 {
+
+	addon-node1 {
+		prop1 = <0x01>;
+		prop2 = <0x02>;
+	};
+
+	addon-node2 {
+		prop3 = <0x03>;
+	};
+};
+
+&base2 {
+
+	addon-node {
+		prop = <0x00>;
+	};
+};
