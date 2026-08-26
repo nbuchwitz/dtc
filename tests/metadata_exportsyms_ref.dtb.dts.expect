@@ -1,0 +1,25 @@
+/dts-v1/;
+/addon/;
+
+/ {
+
+	node-a {
+	};
+
+	node-b {
+	};
+
+	node-c {
+
+		sub-node {
+
+			/export/ ref_base_node_a: &base_node_a;
+			/export/ ref_base_node_b: &base_node_b;
+		};
+	};
+
+	node-d {
+
+		/export/ ref_base_node_c: &base_node_c;
+	};
+};

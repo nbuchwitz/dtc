@@ -1,0 +1,18 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    node-a {
+    };
+    node-b {
+    };
+    node-c {
+        sub-node {
+            // [FDT_EXPORT_SYM_REF] 'ref_base_node_a' -> 'base_node_a'
+            // [FDT_EXPORT_SYM_REF] 'ref_base_node_b' -> 'base_node_b'
+        };
+    };
+    node-d {
+        // [FDT_EXPORT_SYM_REF] 'ref_base_node_c' -> 'base_node_c'
+    };
+};
