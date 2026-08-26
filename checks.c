@@ -609,7 +609,6 @@ ERROR(name_properties, check_name_properties, NULL, &name_is_string);
 static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 				     struct node *node)
 {
-	struct node *dt = dti->dt;
 	struct symbol *exportsym;
 	struct property *prop;
 	struct node *refnode;
@@ -632,7 +631,7 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 				continue;
 			}
 
-			phandle = get_node_phandle(dt, refnode);
+			phandle = get_node_phandle(dti, refnode);
 			*((fdt32_t *)(prop->val.val + m->offset)) = cpu_to_fdt32(phandle);
 
 			reference_node(refnode);
@@ -652,7 +651,7 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 		}
 
 		/* Create the phandle property for this referenced node */
-		phandle = get_node_phandle(dt, refnode);
+		phandle = get_node_phandle(dti, refnode);
 		exportsym->phandle = phandle;
 
 		reference_node(refnode);
