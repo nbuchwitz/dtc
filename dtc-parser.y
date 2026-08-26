@@ -245,7 +245,7 @@ devicetree:
 				ERROR(&@2, "Label or path %s not found", $1);
 			else if (is_ref_relative($1))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $1);
-			$$ = add_orphan_node(
+			$$ = plugin_add_orphan_node(
 					name_node(build_node(NULL, NULL, NULL, NULL),
 						  ""),
 					$2, $1);
@@ -269,7 +269,7 @@ devicetree:
 			if (last_header_flags & DTSF_PLUGIN) {
 				if (is_ref_relative($2))
 					ERROR(&@2, "Label-relative reference %s not supported in plugin", $2);
-				add_orphan_node($1, $3, $2);
+				plugin_add_orphan_node($1, $3, $2);
 			} else {
 				struct node *target = parser_get_node_by_ref($1, $2);
 
@@ -288,7 +288,7 @@ devicetree:
 				merge_nodes(target, $3);
 			} else {
 				if (last_header_flags & DTSF_PLUGIN)
-					add_orphan_node($1, $3, $2);
+					plugin_add_orphan_node($1, $3, $2);
 				else
 					ERROR(&@2, "Label or path %s not found", $2);
 			}
