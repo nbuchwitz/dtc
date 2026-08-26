@@ -561,9 +561,14 @@ static void fill_fullpaths_(struct node *tree, const char *prefix)
 
 static void fill_fullpaths(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	/* Fill fullpaths for the root node */
 	if (dti->dt)
 		fill_fullpaths_(dti->dt, "");
+
+	for_each_orphan(dti->orphanlist, orphan)
+		fill_fullpaths_(orphan, "__orphan__/");
 }
 
 static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
