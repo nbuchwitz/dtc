@@ -20,3 +20,42 @@
 		phandle = <0x01>;
 	};
 };
+
+&abc {
+	prop-a = "a";
+	prop-b = "b";
+
+	node-a {
+		prop = <0x01>;
+	};
+
+	node-b {
+		prop = <0x02>;
+	};
+
+	node-c {
+		prop = <0x03>;
+	};
+};
+
+&de1 {
+	prop-a = "a";
+	prop-b = "b";
+
+	node-a {
+		prop = <0x01>;
+	};
+
+	node-b {
+		prop = <0x02>;
+	};
+
+	node-c {
+		prop = <0x03>;
+	};
+};
+
+&de2 {
+	prop-a = "a";
+	prop-b = "b";
+};

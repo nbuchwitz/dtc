@@ -23,3 +23,36 @@
 		/export/ a: &node_b;
 	};
 };
+
+&de2 {
+	prop-b = "b";
+	prop-a = "a";
+};
+
+&abc {
+	prop-b = "b";
+	prop-a = "a";
+	node-b {
+		prop = <2>;
+	};
+	node-a {
+		prop = <1>;
+	};
+	node-c {
+		prop = <3>;
+	};
+};
+
+&de1 {
+	prop-b = "b";
+	prop-a = "a";
+	node-b {
+		prop = <2>;
+	};
+	node-a {
+		prop = <1>;
+	};
+	node-c {
+		prop = <3>;
+	};
+};

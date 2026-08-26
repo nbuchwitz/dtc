@@ -16,3 +16,33 @@
 // [FDT_IMPORT_SYM] 'abc' (foo,bar)
 // [FDT_IMPORT_SYM] 'de1' (foo,bar)
 // [FDT_IMPORT_SYM] 'de2' (foo,bar)
+&abc {
+    prop-a = "a";
+    prop-b = "b";
+    node-a {
+        prop = <0x00000001>;
+    };
+    node-b {
+        prop = <0x00000002>;
+    };
+    node-c {
+        prop = <0x00000003>;
+    };
+};
+&de1 {
+    prop-a = "a";
+    prop-b = "b";
+    node-a {
+        prop = <0x00000001>;
+    };
+    node-b {
+        prop = <0x00000002>;
+    };
+    node-c {
+        prop = <0x00000003>;
+    };
+};
+&de2 {
+    prop-a = "a";
+    prop-b = "b";
+};
