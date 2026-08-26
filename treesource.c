@@ -12,11 +12,13 @@ extern YYLTYPE yylloc;
 
 struct dt_info *parser_output;
 bool treesource_error;
+struct node *parser_orphanlist;
 
 struct dt_info *dt_from_source(const char *fname)
 {
 	parser_output = NULL;
 	treesource_error = false;
+	parser_orphanlist = NULL;
 
 	srcfile_push(fname);
 	yyin = current_srcfile->f;
@@ -432,6 +434,7 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 {
 	struct reserve_info *re;
 	struct symbol *importsym;
+	struct node *orphan;
 
 	fprintf(f, "/dts-v1/;\n");
 	/*
@@ -464,4 +467,9 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 	}
 
 	write_tree_source_node(f, dti->dt, 0);
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		fprintf(f, "\n");
+		write_tree_source_node(f, orphan, 0);
+	}
 }

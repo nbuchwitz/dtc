@@ -23,6 +23,7 @@ extern void yyerror(char const *s);
 
 extern struct dt_info *parser_output;
 extern bool treesource_error;
+extern struct node *parser_orphanlist;
 
 unsigned int last_header_flags;
 
@@ -31,7 +32,8 @@ static bool is_ref_relative(const char *ref)
 	return ref[0] != '/' && strchr(&ref[1], '/');
 }
 
-static struct node *parser_get_node_by_ref(struct node *dt, const char *ref)
+static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanlist,
+					   const char *ref)
 {
 	/*
 	 * Use a temporary dt_info in order to use dti_get_node_by_ref()
@@ -39,6 +41,7 @@ static struct node *parser_get_node_by_ref(struct node *dt, const char *ref)
 	struct dt_info dti = {};
 
 	dti.dt = dt;
+	dti.orphanlist = orphanlist;
 
 	return get_node_by_ref(&dti, ref);
 }
@@ -132,7 +135,7 @@ sourcefile:
 		{
 			parser_output = build_dt_info($1, $2, $3,
 			                              guess_boot_cpuid($3),
-						      NULL, NULL);
+						      NULL, parser_orphanlist);
 		}
 	|  headers memreserves importlist devicetree
 		{
@@ -143,7 +146,8 @@ sourcefile:
 			 */
 			parser_output = build_dt_info($1, $2, $4,
 			                              $4 ? guess_boot_cpuid($4) : 0,
-			                              reverse_symbol($3), NULL);
+			                              reverse_symbol($3),
+						      parser_orphanlist);
 		}
 	;
 
@@ -241,21 +245,28 @@ devicetree:
 		}
 	| dt_ref nodedef
 		{
-			if (!(last_header_flags & DTSF_PLUGIN))
+			if (!(last_header_flags & (DTSF_PLUGIN | DTSF_ADDON)))
 				ERROR(&@2, "Label or path %s not found", $1);
 			else if (is_ref_relative($1))
-				ERROR(&@2, "Label-relative reference %s not supported in plugin", $1);
-			$$ = plugin_add_orphan_node(
-					name_node(build_node(NULL, NULL, NULL, NULL),
-						  ""),
-					$2, $1);
+				ERROR(&@2, "Label-relative reference %s not supported in plugin nor addon", $1);
+
+			if (last_header_flags & DTSF_PLUGIN) {
+				$$ = plugin_add_orphan_node(
+						name_node(build_node(NULL, NULL, NULL, NULL),
+							  ""),
+						$2, $1);
+			} else {
+				ERROR(&@2, "Orphan node %s without a root node not yet supported", $1);
+				YYERROR;
+			}
 		}
 	| devicetree DT_LABEL dt_ref nodedef
 		{
-			struct node *target = parser_get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref(
+						$1, parser_orphanlist, $3);
 
-			if ((last_header_flags & DTSF_PLUGIN) && is_ref_relative($3))
-				ERROR(&@2, "Label-relative reference %s not supported in plugin", $3);
+			if ((last_header_flags & (DTSF_PLUGIN | DTSF_ADDON)) && is_ref_relative($3))
+				ERROR(&@2, "Label-relative reference %s not supported in plugin nor addon", $3);
 
 			if (target) {
 				add_label(&target->labels, $2);
@@ -266,12 +277,17 @@ devicetree:
 		}
 	| devicetree DT_PATH_REF nodedef
 		{
-			if (last_header_flags & DTSF_PLUGIN) {
+			if (last_header_flags & (DTSF_PLUGIN | DTSF_ADDON)) {
 				if (is_ref_relative($2))
-					ERROR(&@2, "Label-relative reference %s not supported in plugin", $2);
-				plugin_add_orphan_node($1, $3, $2);
+					ERROR(&@2, "Label-relative reference %s not supported in plugin nor addon", $2);
+				if(last_header_flags & DTSF_PLUGIN)
+					plugin_add_orphan_node($1, $3, $2);
+				else
+					addon_add_orphan_node(&parser_orphanlist,
+							      orphan_node($3, $2));
 			} else {
-				struct node *target = parser_get_node_by_ref($1, $2);
+				struct node *target = parser_get_node_by_ref(
+							$1, parser_orphanlist, $2);
 
 				if (target)
 					merge_nodes(target, $3);
@@ -282,13 +298,17 @@ devicetree:
 		}
 	| devicetree DT_LABEL_REF nodedef
 		{
-			struct node *target = parser_get_node_by_ref($1, $2);
+			struct node *target = parser_get_node_by_ref(
+						$1, parser_orphanlist, $2);
 
 			if (target) {
 				merge_nodes(target, $3);
 			} else {
 				if (last_header_flags & DTSF_PLUGIN)
 					plugin_add_orphan_node($1, $3, $2);
+				else if (last_header_flags & DTSF_ADDON)
+					addon_add_orphan_node(&parser_orphanlist,
+							      orphan_node($3, $2));
 				else
 					ERROR(&@2, "Label or path %s not found", $2);
 			}
@@ -296,7 +316,8 @@ devicetree:
 		}
 	| devicetree DT_DEL_NODE dt_ref ';'
 		{
-			struct node *target = parser_get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref(
+						$1, parser_orphanlist, $3);
 
 			if (target)
 				delete_node(target);
@@ -308,7 +329,8 @@ devicetree:
 		}
 	| devicetree DT_OMIT_NO_REF dt_ref ';'
 		{
-			struct node *target = parser_get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref(
+						$1, parser_orphanlist, $3);
 
 			if (target)
 				omit_node_if_unused(target);

@@ -309,6 +309,8 @@ struct node *chain_node(struct node *first, struct node *list);
 struct node *merge_nodes(struct node *old_node, struct node *new_node);
 struct node *plugin_add_orphan_node(struct node *old_node, struct node *new_node,
 				    char *ref);
+struct node *orphan_node(struct node *node, const char *ref);
+void addon_add_orphan_node(struct node **dt_orphan, struct node *new_orphan);
 
 void add_property(struct node *node, struct property *prop);
 void delete_property_by_name(struct node *node, char *name);

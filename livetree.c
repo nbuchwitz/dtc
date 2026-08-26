@@ -351,6 +351,36 @@ struct node *plugin_add_orphan_node(struct node *dt, struct node *new_node,
 	return dt;
 }
 
+struct node *orphan_node(struct node *node, const char *ref)
+{
+	node->ref = xstrdup(ref);
+
+	return node;
+}
+
+void addon_add_orphan_node(struct node **dt_orphan, struct node *new_orphan)
+{
+	struct node **last_orphan;
+	char *name;
+
+	/*
+	 * For addon orphan node, the node name is set to '&reference'
+	 * This ease the dts file generation and the usage of existing code
+	 */
+	xasprintf(&name, "&%s", new_orphan->ref);
+
+	name_node(new_orphan, name);
+	free(name);
+
+	new_orphan->next_sibling = NULL;
+
+	last_orphan = dt_orphan;
+	while (*last_orphan)
+		last_orphan = &((*last_orphan)->next_sibling);
+
+	*last_orphan = new_orphan;
+}
+
 struct node *chain_node(struct node *first, struct node *list)
 {
 	assert(first->next_sibling == NULL);
