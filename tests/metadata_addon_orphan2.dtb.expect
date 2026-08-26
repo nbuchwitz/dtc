@@ -1,0 +1,8 @@
+/dts-v1/;
+/addon/;
+
+&base {
+    addon-node {
+        prop = <0x00000002>;
+    };
+};
