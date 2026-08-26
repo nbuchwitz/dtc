@@ -44,6 +44,33 @@ static const char *tagname(uint32_t tag)
 #define dumpf(fmt, args...) \
 	do { if (debug) printf("// " fmt, ## args); } while (0)
 
+static const char *get_structured_tag_data(uint32_t tag, const char *blob,
+					   const char **data, int *data_size)
+{
+	int sz = 0;
+
+	switch (tag & FDT_TAG_DATA_MASK) {
+	case FDT_TAG_DATA_NONE:
+		break;
+	case FDT_TAG_DATA_1CELL:
+		sz = FDT_CELLSIZE;
+		break;
+	case FDT_TAG_DATA_2CELLS:
+		sz = 2 * FDT_CELLSIZE;
+		break;
+	case FDT_TAG_DATA_VARLEN:
+		/* Get the length */
+		sz = fdt32_to_cpu(GET_CELL(blob));
+		break;
+	}
+
+	*data_size = sz;
+	*data = sz ? blob : NULL;
+
+	/* Skip the data bytes */
+	return PALIGN(blob + sz, 4);
+}
+
 static void dump_blob(void *blob, bool debug, int dump_unknown)
 {
 	uintptr_t blob_off = (uintptr_t)blob;
@@ -58,7 +85,7 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 	uint32_t version = fdt32_to_cpu(bph->version);
 	uint32_t totalsize = fdt32_to_cpu(bph->totalsize);
 	uint32_t tag;
-	const char *p, *s, *t;
+	const char *p, *d, *s, *t;
 	int depth, sz, shift;
 	int i;
 	uint64_t addr, size;
@@ -153,21 +180,7 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 		}
 
 		if ((tag & FDT_TAG_STRUCTURED) && (tag & FDT_TAG_SKIP_SAFE)) {
-			sz = 0;
-			switch (tag & FDT_TAG_DATA_MASK) {
-			case FDT_TAG_DATA_NONE:
-				break;
-			case FDT_TAG_DATA_1CELL:
-				sz = FDT_CELLSIZE;
-				break;
-			case FDT_TAG_DATA_2CELLS:
-				sz = 2 * FDT_CELLSIZE;
-				break;
-			case FDT_TAG_DATA_VARLEN:
-				/* Get the length */
-				sz = fdt32_to_cpu(GET_CELL(p));
-				break;
-			}
+			p = get_structured_tag_data(tag, p, &d, &sz);
 
 			if (dump_unknown) {
 				printf("%*s// Unknown tag ignored: 0x%08"PRIx32", data len %d",
@@ -175,13 +188,10 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 				if (dump_unknown > 1 && sz != 0) {
 					printf(" ");
 					for (i = 0; i < sz; i++)
-						printf("%02hhx", *(p + i));
+						printf("%02hhx", *(d + i));
 				}
 				printf("\n");
 			}
-
-			/* Skip the data bytes */
-			p = PALIGN(p + sz, 4);
 			continue;
 		}
 
