@@ -354,7 +354,7 @@ void *open_blob_rw(const void *blob)
 {
 	int err;
 	void *buf;
-	int newsize = fdt_totalsize(blob) + 8;
+	int newsize = fdt_totalsize(blob) + 8 + 2 * 4;
 
 	buf = xmalloc(newsize);
 	err = fdt_open_into(blob, buf, newsize);

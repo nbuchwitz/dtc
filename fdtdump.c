@@ -18,7 +18,7 @@
 #include "util.h"
 
 #define FDT_MAGIC_SIZE	4
-#define MAX_VERSION 17U
+#define MAX_VERSION 18U
 
 #define ALIGN(x, a)	(((x) + ((a) - 1)) & ~((a) - 1))
 #define PALIGN(p, a)	((void *)(ALIGN((uintptr_t)(p), (a))))
@@ -86,6 +86,12 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 	if (version >= 17)
 		printf("// size_dt_struct:\t0x%"PRIx32"\n",
 		       fdt32_to_cpu(bph->size_dt_struct));
+	if (version >= 18) {
+		printf("// dt_flags:\t\t0x%"PRIx32"\n",
+		       fdt32_to_cpu(bph->dt_flags));
+		printf("// last_comp_version_w:\t%"PRIu32"\n",
+		       fdt32_to_cpu(bph->last_comp_version_w));
+	}
 	printf("\n");
 
 	for (i = 0; ; i++) {

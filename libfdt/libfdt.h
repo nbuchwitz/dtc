@@ -15,7 +15,8 @@ extern "C" {
 
 #define FDT_FIRST_SUPPORTED_VERSION	0x02
 #define FDT_LAST_COMPATIBLE_VERSION	0x10
-#define FDT_LAST_SUPPORTED_VERSION	0x11
+#define FDT_LAST_COMPATIBLE_VERSION_W	0x11
+#define FDT_LAST_SUPPORTED_VERSION	0x12
 
 /* Error codes: informative error codes */
 #define FDT_ERR_NOTFOUND	1
@@ -284,6 +285,8 @@ int fdt_next_subnode(const void *fdt, int offset);
 #define fdt_boot_cpuid_phys(fdt)	(fdt_get_header(fdt, boot_cpuid_phys))
 #define fdt_size_dt_strings(fdt)	(fdt_get_header(fdt, size_dt_strings))
 #define fdt_size_dt_struct(fdt)		(fdt_get_header(fdt, size_dt_struct))
+#define fdt_dt_flags(fdt)		(fdt_get_header(fdt, dt_flags))
+#define fdt_last_comp_version_w(fdt)	(fdt_get_header(fdt, last_comp_version_w))
 
 #define fdt_set_hdr_(name) \
 	static inline void fdt_set_##name(void *fdt, uint32_t val) \
@@ -301,6 +304,8 @@ fdt_set_hdr_(last_comp_version)
 fdt_set_hdr_(boot_cpuid_phys)
 fdt_set_hdr_(size_dt_strings)
 fdt_set_hdr_(size_dt_struct)
+fdt_set_hdr_(dt_flags)
+fdt_set_hdr_(last_comp_version_w)
 #undef fdt_set_hdr_
 
 /**

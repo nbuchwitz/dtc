@@ -19,6 +19,7 @@ treegen_dtb = custom_target(
     'named_root.dtb',
     'unknown_tags_can_skip.dtb',
     'unknown_tags_no_skip.dtb',
+    'last_comp_version_w_future.dtb',
   ]
 )
 

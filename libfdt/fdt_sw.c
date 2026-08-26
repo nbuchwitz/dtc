@@ -137,6 +137,9 @@ int fdt_create_with_flags(void *buf, int bufsize, uint32_t flags)
 	fdt_set_off_dt_struct(fdt, fdt_off_mem_rsvmap(fdt));
 	fdt_set_off_dt_strings(fdt, 0);
 
+	fdt_set_dt_flags(fdt, 0);
+	fdt_set_last_comp_version_w(fdt, FDT_LAST_COMPATIBLE_VERSION_W);
+
 	return 0;
 }
 

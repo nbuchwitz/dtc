@@ -578,7 +578,8 @@ libfdt_tests () {
     run_test dtbs_equal_ordered cell-overflow.test.dtb cell-overflow-results.test.dtb
 
     # check full tests
-    for good in test_tree1.dtb unknown_tags_can_skip.dtb; do
+    for good in test_tree1.dtb unknown_tags_can_skip.dtb \
+		last_comp_version_w_future.dtb; do
 	run_test check_full $good
     done
     for bad in truncated_property.dtb truncated_string.dtb \
@@ -592,27 +593,27 @@ libfdt_tests () {
     cp unknown_tags_can_skip.dtb $dtb
     base_run_test wrap_fdtdump $dtb $dtb.0.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.0.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.0.out
     base_run_test check_diff $dtb.0.out "$SRCDIR/$dtb.0.expect"
 
     run_test wip_func $dtb set_prop / prop-str 0 "vwxy"
     base_run_test wrap_fdtdump $dtb $dtb.1.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.1.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.1.out
     base_run_test check_diff $dtb.1.out "$SRCDIR/$dtb.1.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
     run_test wip_func $dtb nop_prop /subnode2 prop-int1
     base_run_test wrap_fdtdump $dtb $dtb.2.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.2.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.2.out
     base_run_test check_diff $dtb.2.out "$SRCDIR/$dtb.2.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
     run_test wip_func $dtb nop_node /subnode2/subsubnode
     base_run_test wrap_fdtdump $dtb $dtb.3.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.3.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.3.out
     base_run_test check_diff $dtb.3.out "$SRCDIR/$dtb.3.expect"
 }
 
@@ -917,6 +918,14 @@ dtc_tests () {
     run_dtc_test -I dtb -O dts -o unknown_tags_can_skip.dtb.dts unknown_tags_can_skip.dtb
     base_run_test check_diff unknown_tags_can_skip.dtb.dts "$SRCDIR/unknown_tags_can_skip.dtb.dts.expect"
     run_wrap_error_test $DTC -I dtb -O dts -o unknown_tags_no_skip.dtb.dts unknown_tags_no_skip.dtb
+
+    # Tests dt_flags header field (default value)
+    run_dtc_test -I dts -O dtb -o dtflags_default.dtb "$SRCDIR/dtflags_default.dts"
+    base_run_test wrap_fdtdump dtflags_default.dtb dtflags_default.dtb.out
+    # Keep only lines containing 'dt_flags'
+    sed -i '/dt_flags/!d' dtflags_default.dtb.out
+    base_run_test check_diff dtflags_default.dtb.out "$SRCDIR/dtflags_default.dtb.expect"
+    run_test check_full dtflags_default.dtb
 }
 
 cmp_tests () {
@@ -1074,32 +1083,41 @@ fdtput_tests () {
 
     # TODO: Add tests for verbose mode?
 
+    # Not allowed to modify a dtb due to last_comp_version_w
+    # FDT_ERR_BADVERSION error code is returned
+    dtb=last_comp_version_w_future.fdtput.test.dtb
+    cp last_comp_version_w_future.dtb $dtb
+    run_wrap_error_test $DTPUT $dtb /subnode prop-int -tu 123
+    run_wrap_error_test $DTPUT $dtb -d /subnode prop-int
+    run_wrap_error_test $DTPUT $dtb -c /new-node
+    run_wrap_error_test $DTPUT $dtb -r /subnode
+
     # Modify a dtb containing some "unknown" tags that can be skipped
     dtb=unknown_tags_can_skip.fdtput.test.dtb
     cp unknown_tags_can_skip.dtb $dtb
     base_run_test wrap_fdtdump $dtb $dtb.0.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.0.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.0.out
     base_run_test check_diff $dtb.0.out "$SRCDIR/$dtb.0.expect"
 
     run_fdtput_test "vwxyz" $dtb / prop-str -ts "vwxyz"
     base_run_test wrap_fdtdump $dtb $dtb.1.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.1.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.1.out
     base_run_test check_diff $dtb.1.out "$SRCDIR/$dtb.1.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
     run_wrap_test $DTPUT $dtb -c /tst-fdtput
     base_run_test wrap_fdtdump $dtb $dtb.2.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.2.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.2.out
     base_run_test check_diff $dtb.2.out "$SRCDIR/$dtb.2.expect"
     run_wrap_test $DTPUT $dtb -c /tst-fdtput/n1 /tst-fdtput/n2 /tst-fdtput/n3
     run_wrap_test $DTPUT $dtb -r /tst-fdtput/n1 /tst-fdtput/n3
     run_fdtget_test "n2" $dtb -l  /tst-fdtput
     base_run_test wrap_fdtdump $dtb $dtb.3.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.3.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.3.out
     base_run_test check_diff $dtb.3.out "$SRCDIR/$dtb.3.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
@@ -1107,21 +1125,21 @@ fdtput_tests () {
     run_fdtget_test "prop-int" $dtb -p  /
     base_run_test wrap_fdtdump $dtb $dtb.4.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.4.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.4.out
     base_run_test check_diff $dtb.4.out "$SRCDIR/$dtb.4.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
     run_wrap_test $DTPUT $dtb /subnode2 prop-tst-fdtput -ts "Test fdtput"
     base_run_test wrap_fdtdump $dtb $dtb.5.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.5.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.5.out
     base_run_test check_diff $dtb.5.out "$SRCDIR/$dtb.5.expect"
 
     cp unknown_tags_can_skip.dtb $dtb
     run_wrap_test $DTPUT $dtb -r /subnode2/subsubnode
     base_run_test wrap_fdtdump $dtb $dtb.6.out
     # Remove unneeded header fields (keep those related to versions)
-    sed -i '/^\/.*\(magic\|off\|size\|cpu\)/d' $dtb.6.out
+    sed -i '/^\/.*\(magic\|off\|size\|cpu\|flags\)/d' $dtb.6.out
     base_run_test check_diff $dtb.6.out "$SRCDIR/$dtb.6.expect"
 }
 

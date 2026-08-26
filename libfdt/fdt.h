@@ -26,6 +26,10 @@ struct fdt_header {
 
 	/* version 17 fields below */
 	fdt32_t size_dt_struct;		 /* size of the structure block */
+
+	/* version 18 fields below */
+	fdt32_t dt_flags;		/* Ored value of FDT_FLAG_XXXX */
+	fdt32_t last_comp_version_w;	/* last compatible version for writing */
 };
 
 struct fdt_reserve_entry {
@@ -85,5 +89,6 @@ struct fdt_property {
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))
 #define FDT_V16_SIZE	FDT_V3_SIZE
 #define FDT_V17_SIZE	(FDT_V16_SIZE + sizeof(fdt32_t))
+#define FDT_V18_SIZE	(FDT_V17_SIZE + 2 * sizeof(fdt32_t))
 
 #endif /* FDT_H */

@@ -1,6 +1,7 @@
 /dts-v1/;
-// version:		17
+// version:		18
 // last_comp_version:	16
+// last_comp_version_w:	17
 
 // Unknown tag ignored: 0xd0000000, data len 4 00000001
 / {

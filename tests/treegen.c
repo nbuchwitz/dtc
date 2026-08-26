@@ -106,7 +106,8 @@ static void fill_prop_name(struct buf *b, size_t strs, size_t prop, size_t strof
 /* FDT structure helpers */
 
 static size_t emit_fdt_header_vers(struct buf *b, uint32_t version,
-				   uint32_t last_comp_version)
+				   uint32_t last_comp_version,
+				   uint32_t last_comp_version_w)
 {
 	size_t off = emit_u32(b, FDT_MAGIC);
 
@@ -119,12 +120,14 @@ static size_t emit_fdt_header_vers(struct buf *b, uint32_t version,
 	emit_u32(b, 0);	/* boot_cpuid_phys */
 	emit_u32(b, 0);	/* size_dt_strings */
 	emit_u32(b, 0);	/* size_dt_struct */
+	emit_u32(b, 0);	/* dt_flags */
+	emit_u32(b, last_comp_version_w);	/* last_comp_version_w */
 	return off;
 }
 
 static size_t emit_fdt_header(struct buf *b)
 {
-	return emit_fdt_header_vers(b, 0x11, 0x10);
+	return emit_fdt_header_vers(b, 0x12, 0x10, 0x11);
 }
 
 static void finish_rsvmap(struct buf *b, size_t hdr, size_t rsvmap)
@@ -720,7 +723,7 @@ static struct buf make_unknown_tags_can_skip(void)
 	size_t p_sn2_int1, p_sn2_int2;
 	size_t p_sn2ssn_bool;
 
-	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10);
+	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10, 0x11);
 	emit_align(&b, 8);
 
 	emit_rsvmap_empty(&b, hdr);
@@ -833,7 +836,7 @@ static struct buf make_unknown_tags_no_skip(void)
 	size_t hdr;
 	size_t p_prop_u64;
 
-	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10);
+	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10, 0x11);
 	emit_align(&b, 8);
 
 	emit_rsvmap_empty(&b, hdr);
@@ -867,6 +870,47 @@ static struct buf make_unknown_tags_no_skip(void)
 	return b;
 }
 
+/* Tree with "unknown" tags that can be skipped
+ * Use a really future dtb version to check version downgrade on
+ * modification.
+ */
+static struct buf make_last_comp_version_w_future(void)
+{
+	struct buf b = buf_init();
+	size_t hdr;
+	size_t p_int;
+
+	hdr = emit_fdt_header_vers(&b, 0xffffffff, 0x10, 0xffffffff);
+	emit_align(&b, 8);
+
+	emit_rsvmap_empty(&b, hdr);
+
+	{
+		size_t ss = start_block(&b);
+
+		emit_begin_node(&b, "");
+			p_int = emit_prop_u64(&b, 0, 0x100000002);
+		emit_end_node(&b);
+		emit_fdt_end(&b);
+
+		finish_struct_block(&b, hdr, ss);
+	}
+
+	{
+		size_t strs = start_block(&b);
+		size_t s;
+
+		s = emit_string(&b, "prop-int");
+		fill_prop_name(&b, strs, p_int, s);
+
+		finish_strings_block(&b, hdr, strs);
+	}
+
+	finish_totalsize(&b, hdr);
+
+	return b;
+}
+
 /* Tree table and main */
 
 static struct {
@@ -884,6 +928,7 @@ static struct {
 	TREE(named_root),
 	TREE(unknown_tags_can_skip),
 	TREE(unknown_tags_no_skip),
+	TREE(last_comp_version_w_future),
 };
 
 int main(int argc, char *argv[])

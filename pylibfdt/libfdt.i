@@ -281,6 +281,22 @@ class FdtRo(object):
         """
         return fdt_size_dt_struct(self._fdt)
 
+    def dt_flags(self):
+        """Return flags from the header
+
+        Returns:
+            flags value from the header
+        """
+        return fdt_dt_flags(self._fdt)
+
+    def last_comp_version_w(self):
+        """Return the last compatible version for writing of the device tree
+
+        Returns:
+            Last compatible version number for writing of the device tree
+        """
+        return fdt_last_comp_version_w(self._fdt)
+
     def num_mem_rsv(self, quiet=()):
         """Return the number of memory reserve-map records
 
@@ -1287,6 +1303,8 @@ uint32_t fdt_last_comp_version(const void *fdt);
 uint32_t fdt_boot_cpuid_phys(const void *fdt);
 uint32_t fdt_size_dt_strings(const void *fdt);
 uint32_t fdt_size_dt_struct(const void *fdt);
+uint32_t fdt_dt_flags(const void *fdt);
+uint32_t fdt_last_comp_version_w(const void *fdt);
 
 int fdt_property_string(void *fdt, const char *name, const char *val);
 int fdt_property_cell(void *fdt, const char *name, uint32_t val);
