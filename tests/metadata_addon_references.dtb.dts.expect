@@ -1,0 +1,47 @@
+/dts-v1/;
+/addon/;
+
+/ {
+
+	sub-node {
+		ref1-base1 = <&base1>;
+		ref2-base1-addon-node = <&{$base1/addon-node}>;
+		ref3-base1-addon-node = <&{$base1/addon-node}>;
+		ref4-base1-addon-node = <&{$base1/addon-node}>;
+		ref5-base3 = <&base3>;
+		ref6-base3 = <&base3>;
+		ref7-base3-subsubnode = <&{$base3/sub-node/sub-subnode}>;
+		phandle = <0x03>;
+	};
+};
+
+&base1 {
+
+	addon-node {
+		prop = <0x02>;
+		phandle = <0x01>;
+	};
+};
+
+&base2 {
+
+	addon-node1 {
+		ref-base1-addon-node = <&{$base1/addon-node}>;
+	};
+
+	addon-node2 {
+		ref-root-sub-node = <&{/sub-node}>;
+	};
+};
+
+&base3 {
+
+	sub-node {
+		prop = <0x03>;
+
+		sub-subnode {
+			prop = <0x04>;
+			phandle = <0x02>;
+		};
+	};
+};

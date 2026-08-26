@@ -1,0 +1,47 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    sub-node {
+        ref1-base1 = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref1-base1[0], ref = base1
+        ref2-base1-addon-node = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref2-base1-addon-node[0]
+        ref3-base1-addon-node = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref3-base1-addon-node[0]
+        ref4-base1-addon-node = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref4-base1-addon-node[0]
+        ref5-base3 = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref5-base3[0], ref = base3
+        ref6-base3 = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref6-base3[0], ref = base3
+        ref7-base3-subsubnode = <0x00000002>;
+        // [FDT_PROPDATA_PHANDLE] ref7-base3-subsubnode[0]
+        phandle = <0x00000003>;
+    };
+};
+&base1 {
+    addon-node {
+        prop = <0x00000002>;
+        phandle = <0x00000001>;
+    };
+};
+&base2 {
+    addon-node1 {
+        ref-base1-addon-node = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref-base1-addon-node[0]
+    };
+    addon-node2 {
+        ref-root-sub-node = <0x00000003>;
+        // [FDT_PROPDATA_PHANDLE] ref-root-sub-node[0]
+    };
+};
+&base3 {
+    sub-node {
+        prop = <0x00000003>;
+        sub-subnode {
+            prop = <0x00000004>;
+            phandle = <0x00000002>;
+        };
+    };
+};
