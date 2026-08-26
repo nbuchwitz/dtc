@@ -167,11 +167,56 @@ const void *fdt_offset_ptr(const void *fdt, int offset, unsigned int len)
 	return fdt_offset_ptr_(fdt, offset);
 }
 
+int fdt_get_structured_tag_data(uint32_t tag, const void *fdt, int offset,
+				uint32_t *data_len)
+{
+	int data_offset = offset;
+	uint32_t len = 0, sum;
+	const fdt32_t *lenp;
+
+	if (!(tag & FDT_TAG_STRUCTURED))
+		return -FDT_ERR_INTERNAL;
+
+	switch (tag & FDT_TAG_DATA_MASK) {
+	case FDT_TAG_DATA_NONE:
+		break;
+	case FDT_TAG_DATA_1CELL:
+		len = FDT_CELLSIZE;
+		break;
+	case FDT_TAG_DATA_2CELLS:
+		len = 2 * FDT_CELLSIZE;
+		break;
+	case FDT_TAG_DATA_VARLEN:
+		/* Get the length */
+		lenp = fdt_offset_ptr(fdt, offset, sizeof(*lenp));
+		if (!can_assume(VALID_DTB) && !lenp)
+			return -FDT_ERR_BADSTRUCTURE;
+		len = fdt32_to_cpu(*lenp);
+
+		/* Skip the cell encoding the length */
+		data_offset += sizeof(*lenp);
+
+		/* Check for the length value */
+		sum = len + data_offset;
+		if (!can_assume(VALID_DTB) &&
+		    (sum >= INT_MAX || sum < (uint32_t) offset))
+			return -FDT_ERR_BADSTRUCTURE;
+
+		break;
+	}
+
+	if (data_len)
+		*data_len = len;
+
+	return data_offset;
+}
+
 static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffset)
 {
 	const fdt32_t *tagp, *lenp;
 	uint32_t tag, len, sum;
 	int offset = startoffset;
+	int tmp_offset;
 	const char *p;
 
 	*nextoffset = -FDT_ERR_TRUNCATED;
@@ -221,34 +266,13 @@ static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffs
 		if (!(tag & FDT_TAG_STRUCTURED) || !(tag & FDT_TAG_SKIP_SAFE))
 			return FDT_END;
 
-		switch (tag & FDT_TAG_DATA_MASK) {
-		case FDT_TAG_DATA_NONE:
-			break;
-		case FDT_TAG_DATA_1CELL:
-			offset += FDT_CELLSIZE;
-			break;
-		case FDT_TAG_DATA_2CELLS:
-			offset += 2 * FDT_CELLSIZE;
-			break;
-		case FDT_TAG_DATA_VARLEN:
-			/* Get the length */
-			lenp = fdt_offset_ptr(fdt, offset, sizeof(*lenp));
-			if (!can_assume(VALID_DTB) && !lenp)
-				return FDT_END; /* premature end */
-			len = fdt32_to_cpu(*lenp);
-			/*
-			 * Skip the cell encoding the length and the
-			 * following length bytes
-			 */
-			len += sizeof(*lenp);
-			sum = len + offset;
-			if (!can_assume(VALID_DTB) &&
-			    (sum >= INT_MAX || sum < (uint32_t) offset))
-				return FDT_END; /* premature end */
+		tmp_offset = fdt_get_structured_tag_data(tag, fdt, offset, &len);
+		if (tmp_offset < 0)
+			return FDT_END; /* premature end */
 
-			offset += len;
-			break;
-		}
+		/* Skip the whole data bloc */
+		offset = tmp_offset + len;
+		break;
 	}
 
 	if (!fdt_offset_ptr(fdt, startoffset, offset - startoffset))
