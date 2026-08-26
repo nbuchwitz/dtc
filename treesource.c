@@ -466,7 +466,8 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 		fprintf(f, "\n");
 	}
 
-	write_tree_source_node(f, dti->dt, 0);
+	if (dti->dt)
+		write_tree_source_node(f, dti->dt, 0);
 
 	for_each_orphan(dti->orphanlist, orphan) {
 		fprintf(f, "\n");

@@ -692,7 +692,8 @@ static void complete_references(struct dt_info *dti)
 {
 	struct node *orphan;
 
-	complete_references_internal(dti, dti->dt);
+	if (dti->dt)
+		complete_references_internal(dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		complete_references_internal(dti, orphan);
@@ -1336,7 +1337,9 @@ void sort_tree(struct dt_info *dti)
 {
 	sort_reserve_entries(dti);
 	sort_importsyms(dti);
-	sort_node(dti->dt);
+
+	if (dti->dt)
+		sort_node(dti->dt);
 }
 
 /* utility helper to avoid code duplication */
@@ -1605,6 +1608,8 @@ void generate_labels_from_tree(struct dt_info *dti, const char *name)
 
 void generate_label_tree(struct dt_info *dti, const char *name, bool allocph)
 {
+	assert(dti->dt);
+
 	if (!any_label_tree(dti, dti->dt))
 		return;
 	generate_label_tree_internal(dti, build_root_node(dti->dt, name),
@@ -1613,6 +1618,8 @@ void generate_label_tree(struct dt_info *dti, const char *name, bool allocph)
 
 void generate_fixups_tree(struct dt_info *dti, const char *name)
 {
+	assert(dti->dt);
+
 	if (!any_fixup_tree(dti, dti->dt))
 		return;
 	if (generate_fixups_tree_internal(dti, build_root_node(dti->dt, name), dti->dt))
@@ -1719,6 +1726,8 @@ void fixup_phandles(struct dt_info *dti, const char *name)
 
 void generate_local_fixups_tree(struct dt_info *dti, const char *name)
 {
+	assert(dti->dt);
+
 	if (!any_local_fixup_tree(dti, dti->dt))
 		return;
 	if (generate_local_fixups_tree_internal(dti, build_root_node(dti->dt, name), dti->dt))

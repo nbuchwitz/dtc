@@ -133,12 +133,18 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 sourcefile:
 	  headers memreserves devicetree
 		{
+			if (!($1 & DTSF_ADDON) && !$3)
+				ERROR(&@3, "Only addon support missing root node");
+
 			parser_output = build_dt_info($1, $2, $3,
-			                              guess_boot_cpuid($3),
+			                              $3 ? guess_boot_cpuid($3) : 0,
 						      NULL, parser_orphanlist);
 		}
 	|  headers memreserves importlist devicetree
 		{
+			if (!($1 & DTSF_ADDON) && !$4)
+				ERROR(&@4, "Only addon support missing root node");
+
 			/*
 			 * importlist is created with chain_symbol() and so it
 			 * is created in reverse order. Reverse it now to have
@@ -241,7 +247,10 @@ devicetree:
 		}
 	| devicetree '/' nodedef
 		{
-			$$ = merge_nodes($1, $3);
+			if ($1)
+				$$ = merge_nodes($1, $3);
+			else
+				$$ = name_node($3, "");
 		}
 	| dt_ref nodedef
 		{
@@ -256,8 +265,9 @@ devicetree:
 							  ""),
 						$2, $1);
 			} else {
-				ERROR(&@2, "Orphan node %s without a root node not yet supported", $1);
-				YYERROR;
+				addon_add_orphan_node(&parser_orphanlist,
+						      orphan_node($2, $1));
+				$$ = NULL;
 			}
 		}
 	| devicetree DT_LABEL dt_ref nodedef

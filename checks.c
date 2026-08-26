@@ -154,7 +154,6 @@ static bool is_multiple_of(int multiple, int divisor)
 
 static bool run_check(struct check *c, struct dt_info *dti)
 {
-	struct node *dt = dti->dt;
 	struct node *orphan;
 	bool error = false;
 	int i;
@@ -179,7 +178,8 @@ static bool run_check(struct check *c, struct dt_info *dti)
 	if (c->status != UNCHECKED)
 		goto out;
 
-	check_nodes_props(c, dti, dt);
+	if (dti->dt)
+		check_nodes_props(c, dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		check_nodes_props(c, dti, orphan);
@@ -2103,6 +2103,31 @@ void process_checks(bool force, struct dt_info *dti)
 		fprintf(stderr,
 			"ERROR: Input tree cannot be both an addon and an overlay\n");
 		exit(2);
+	}
+
+	if (!dti->dt) {
+		/* No root node is only allowed for addons */
+		if (dti->dtsflags & DTSF_ADDON) {
+			if (!dti->orphanlist) {
+				/*
+				 * but addons without a root node and without
+				 * orphan nodes is really incorrect
+				 */
+				fprintf(stderr,
+					"ERROR: Input tree has no root or orphan nodes, aborting\n");
+				exit(2);
+			}
+		} else {
+			fprintf(stderr, "ERROR: Input tree has no root node, aborting\n");
+			exit(2);
+		}
+	}
+
+	if (!(dti->dtsflags & DTSF_ADDON)) {
+		if (dti->orphanlist) {
+			fprintf(stderr, "ERROR: Input tree has orphan nodes, aborting\n");
+			exit(2);
+		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(check_table); i++) {

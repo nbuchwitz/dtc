@@ -316,18 +316,29 @@ int main(int argc, char *argv[])
 
 	process_checks(force, dti);
 
-	if (auto_label_aliases)
+	if (auto_label_aliases) {
+		if (!dti->dt)
+			die("auto-alias not supported without a root node\n");
 		generate_label_tree(dti, "aliases", false);
+	}
 
-	generate_labels_from_tree(dti, "__symbols__");
+	if (dti->dt)
+		generate_labels_from_tree(dti, "__symbols__");
 
-	if (generate_symbols)
+	if (generate_symbols) {
+		if (!dti->dt)
+			die("generation of symbols not supported without a root node\n");
 		generate_label_tree(dti, "__symbols__", true);
+	}
 
-	fixup_phandles(dti, "__fixups__");
-	local_fixup_phandles(dti, "__local_fixups__");
+	if (dti->dt) {
+		fixup_phandles(dti, "__fixups__");
+		local_fixup_phandles(dti, "__local_fixups__");
+	}
 
 	if (generate_fixups) {
+		if (!dti->dt)
+			die("generation of fixups not supported without a root node\n");
 		generate_fixups_tree(dti, "__fixups__");
 		generate_local_fixups_tree(dti, "__local_fixups__");
 	}

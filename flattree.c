@@ -573,7 +573,9 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 
 	dt_flags |= dti->dtsflags & DTSF_ADDON ? FDT_FLAG_ADDON : 0;
 
-	flatten_tree(dti->dt, &bin_emitter, &dtbuf, &strbuf, vi);
+	if (dti->dt)
+		flatten_tree(dti->dt, &bin_emitter, &dtbuf, &strbuf, vi);
+
 	flatten_imports(dti->importsymlist, &bin_emitter, &dtbuf, vi, dt_flags);
 	flatten_orphans(dti->orphanlist, &bin_emitter, &dtbuf, &strbuf, vi,
 			dt_flags);
@@ -769,7 +771,9 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 	fprintf(f, "\t.long\t0, 0\n\t.long\t0, 0\n");
 
 	emit_label(f, symprefix, "struct_start");
-	flatten_tree(dti->dt, &asm_emitter, f, &strbuf, vi);
+
+	if (dti->dt)
+		flatten_tree(dti->dt, &asm_emitter, f, &strbuf, vi);
 
 	fprintf(f, "\t/* FDT_END */\n");
 	asm_emit_cell(f, FDT_END);
@@ -1238,7 +1242,7 @@ struct dt_info *dt_from_blob(const char *fname)
 	struct inbuf memresvbuf;
 	int sizeleft;
 	struct reserve_info *reservelist;
-	struct node *tree;
+	struct node *tree = NULL;
 	struct symbol *importsymlist = NULL;
 	struct symbol *importsym;
 	struct node *orphanlist = NULL;
@@ -1352,15 +1356,24 @@ struct dt_info *dt_from_blob(const char *fname)
 
 	reservelist = flat_read_mem_reserve(&memresvbuf);
 
-	val = flat_read_tag(&dtbuf);
-	if (val != FDT_BEGIN_NODE)
-		die("Device tree blob doesn't begin with FDT_BEGIN_NODE (begins with 0x%08x)\n", val);
+	if (!(dtsflags & DTSF_ADDON)) {
+		val = flat_read_tag(&dtbuf);
+		if (val != FDT_BEGIN_NODE)
+			die("Device tree blob doesn't begin with FDT_BEGIN_NODE (begins with 0x%08x)\n",
+			    val);
 
-	tree = unflatten_tree(&dtbuf, &strbuf, "", flags, false);
+		tree = unflatten_tree(&dtbuf, &strbuf, "", flags, false);
 
-	val = flat_read_tag(&dtbuf);
+		val = flat_read_tag(&dtbuf);
+		if (val != FDT_END)
+			die("Device tree blob doesn't end with FDT_END\n");
+	} else {
+		val = flat_read_tag(&dtbuf);
+		if (val == FDT_BEGIN_NODE) {
+			tree = unflatten_tree(&dtbuf, &strbuf, "", flags, false);
+			val = flat_read_tag(&dtbuf);
+		}
 
-	if (dtsflags & DTSF_ADDON) {
 		if (flags & FTF_EXPORT_IMPORT_SYM) {
 			while (val == FDT_IMPORT_SYM) {
 				importsym = flat_read_importsym(&dtbuf);
@@ -1377,16 +1390,20 @@ struct dt_info *dt_from_blob(const char *fname)
 				val = flat_read_tag(&dtbuf);
 			}
 		}
-	}
 
-	if (val != FDT_END)
-		die("Device tree blob doesn't end with FDT_END\n");
+		if (!tree && !orphanlist)
+			die("Device tree blob has 0x%08x tag instead of FDT_BEGIN_NODE or FDT_BEGIN_NODE_REF\n",
+			    val);
+
+		if (val != FDT_END)
+			die("Device tree blob doesn't end with FDT_END\n");
+	}
 
 	free(blob);
 
 	fclose(f);
 
-	if (get_subnode(tree, "__fixups__") || get_subnode(tree, "__local_fixups__"))
+	if (tree && (get_subnode(tree, "__fixups__") || get_subnode(tree, "__local_fixups__")))
 		dtsflags |= DTSF_PLUGIN;
 
 	return build_dt_info(dtsflags, reservelist, tree, boot_cpuid_phys,
