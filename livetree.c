@@ -1028,6 +1028,42 @@ static void sort_properties(struct node *node)
 	free(tbl);
 }
 
+static int cmp_symbol(const void *ax, const void *bx)
+{
+	const struct symbol *a, *b;
+
+	a = *((const struct symbol * const *)ax);
+	b = *((const struct symbol * const *)bx);
+
+	return strcmp(a->name, b->name);
+}
+
+static void sort_exportsyms(struct node *node)
+{
+	int n = 0, i = 0;
+	struct symbol *symbol, **tbl;
+
+	for_each_symbol(node->exportsymlist, symbol)
+		n++;
+
+	if (n == 0)
+		return;
+
+	tbl = xmalloc(n * sizeof(*tbl));
+
+	for_each_symbol(node->exportsymlist, symbol)
+		tbl[i++] = symbol;
+
+	qsort(tbl, n, sizeof(*tbl), cmp_symbol);
+
+	node->exportsymlist = tbl[0];
+	for (i = 0; i < (n-1); i++)
+		tbl[i]->next = tbl[i+1];
+	tbl[n-1]->next = NULL;
+
+	free(tbl);
+}
+
 static int cmp_subnode(const void *ax, const void *bx)
 {
 	const struct node *a, *b;
@@ -1069,6 +1105,7 @@ static void sort_node(struct node *node)
 	struct node *c;
 
 	sort_properties(node);
+	sort_exportsyms(node);
 	sort_subnodes(node);
 	for_each_child_withdel(node, c)
 		sort_node(c);
