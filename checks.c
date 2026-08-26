@@ -748,7 +748,7 @@ static void check_alias_paths(struct check *c, struct dt_info *dti,
 
 		/* This check does not work for overlays nor addons with external paths */
 		if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)) &&
-		    (!prop->val.val || !get_node_by_path(dti->dt, prop->val.val))) {
+		    (!prop->val.val || !get_node_by_path(dti, prop->val.val))) {
 			FAIL_PROP(c, dti, node, prop, "aliases property is not a valid node (%s)",
 				  prop->val.val);
 			continue;

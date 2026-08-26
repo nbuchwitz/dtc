@@ -771,7 +771,7 @@ struct node *get_subnode(struct node *node, const char *nodename)
 	return NULL;
 }
 
-struct node *get_node_by_path(struct node *tree, const char *path)
+static struct node *get_node_by_path_(struct node *tree, const char *path)
 {
 	const char *p;
 	struct node *child;
@@ -789,7 +789,7 @@ struct node *get_node_by_path(struct node *tree, const char *path)
 
 	for_each_child(tree, child) {
 		if (p && strprefixeq(path, (size_t)(p - path), child->name))
-			return get_node_by_path(child, p+1);
+			return get_node_by_path_(child, p+1);
 		else if (!p && streq(path, child->name))
 			return child;
 	}
@@ -892,9 +892,17 @@ struct node *get_node_by_ref(struct node *tree, const char *ref)
 	}
 
 	if (path)
-		target = get_node_by_path(target, path);
+		target = get_node_by_path_(target, path);
 
 	return target;
+}
+
+struct node *get_node_by_path(struct dt_info *dti, const char *path)
+{
+	if (dti->dt)
+		return get_node_by_path_(dti->dt, path);
+
+	return NULL;
 }
 
 static void add_phandle_property(struct node *node,
@@ -940,7 +948,7 @@ uint32_t guess_boot_cpuid(struct node *tree)
 	struct node *cpus, *bootcpu;
 	struct property *reg;
 
-	cpus = get_node_by_path(tree, "/cpus");
+	cpus = get_node_by_path_(tree, "/cpus");
 	if (!cpus)
 		return 0;
 
@@ -1415,7 +1423,7 @@ void generate_labels_from_tree(struct dt_info *dti, const char *name)
 	for_each_property(an, p) {
 		struct node *labeled_node;
 
-		labeled_node = get_node_by_path(dti->dt, p->val.val);
+		labeled_node = get_node_by_path_(dti->dt, p->val.val);
 		if (labeled_node)
 			add_label(&labeled_node->labels, p->name);
 		else if (quiet < 1)
@@ -1497,7 +1505,7 @@ void fixup_phandles(struct dt_info *dti, const char *name)
 			 */
 			*(propname - 1) = '\0';
 
-			n = get_node_by_path(dti->dt, fv);
+			n = get_node_by_path_(dti->dt, fv);
 			if (!n && quiet < 1)
 				fprintf(stderr, "Warning: Label %s references non-existing node %s\n",
 					fp->name, fv);
