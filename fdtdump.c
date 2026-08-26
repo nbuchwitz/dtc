@@ -192,6 +192,16 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 			continue;
 		}
 
+		if (tag == FDT_PROPDATA_PHANDLE_REF) {
+			p = get_structured_tag_data(tag, p, &d, &sz);
+			offset = fdt32_to_cpu(GET_CELL(d));
+			s = d;
+
+			printf("%*s// [FDT_PROPDATA_PHANDLE_REF] %s[%"PRIu32"], ref = %s\n",
+				depth * shift, "", last_prop_name, offset, s);
+			continue;
+		}
+
 		if ((tag & FDT_TAG_STRUCTURED) && (tag & FDT_TAG_SKIP_SAFE)) {
 			p = get_structured_tag_data(tag, p, &d, &sz);
 

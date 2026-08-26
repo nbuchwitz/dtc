@@ -95,6 +95,20 @@ struct fdt_property {
  */
 #define FDT_PROPDATA_PHANDLE   FDT_TAG_CAN_SKIP(FDT_TAG_DATA_1CELL, 0x1000)
 
+/*
+ * external phandle tag (meta-data). varlen: offset, string label
+ *
+ * It indicates that the property defined before this tag (FDT_PROP) uses a
+ * phandle value and the node related to this phandle value is not local
+ * node (i.e. the node is not present in the device-tree blob). The phandle
+ * value used in the property has to be resolved when the device-tree blob
+ * is applied on top of a base device-tree.
+ *
+ * offset: Offset in the property data where the phandle is available
+ * label: The label to use to resolve the phandle value
+ */
+#define FDT_PROPDATA_PHANDLE_REF  FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x1001)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))

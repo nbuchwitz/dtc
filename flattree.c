@@ -51,6 +51,7 @@ struct emitter {
 	void (*endnode)(void *, struct label *labels);
 	void (*property)(void *, struct label *labels);
 	void (*propdata_phandle)(void *);
+	void (*propdata_phandle_ref)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -105,6 +106,11 @@ static void bin_emit_propdata_phandle(void *e)
 	bin_emit_cell(e, FDT_PROPDATA_PHANDLE);
 }
 
+static void bin_emit_propdata_phandle_ref(void *e)
+{
+	bin_emit_cell(e, FDT_PROPDATA_PHANDLE_REF);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -114,6 +120,7 @@ static struct emitter bin_emitter = {
 	.endnode = bin_emit_endnode,
 	.property = bin_emit_property,
 	.propdata_phandle = bin_emit_propdata_phandle,
+	.propdata_phandle_ref = bin_emit_propdata_phandle_ref,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -233,6 +240,14 @@ static void asm_emit_propdata_phandle(void *e)
 	asm_emit_cell(e, FDT_PROPDATA_PHANDLE);
 }
 
+static void asm_emit_propdata_phandle_ref(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_PROPDATA_PHANDLE_REF */\n");
+	asm_emit_cell(e, FDT_PROPDATA_PHANDLE_REF);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -242,6 +257,7 @@ static struct emitter asm_emitter = {
 	.endnode = asm_emit_endnode,
 	.property = asm_emit_property,
 	.propdata_phandle = asm_emit_propdata_phandle,
+	.propdata_phandle_ref = asm_emit_propdata_phandle_ref,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -306,6 +322,16 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 					emit->cell(etarget, m->offset);
 					continue;
 				}
+
+				if (m->ref[0] == '/')
+					die("Phandle uses a non local reference by path (%s)\n",
+					    m->ref);
+
+				emit->propdata_phandle_ref(etarget);
+				emit->cell(etarget, sizeof(cell_t) + strlen(m->ref) + 1);
+				emit->cell(etarget, m->offset);
+				emit->string(etarget, m->ref, 0);
+				emit->align(etarget, sizeof(cell_t));
 			}
 		}
 	}
@@ -626,6 +652,16 @@ static void inbuf_init(struct inbuf *inb, void *base, void *limit)
 	inb->ptr = inb->base;
 }
 
+static void flat_read_subbuf(struct inbuf *inb, struct inbuf *subbuf, int len)
+{
+	if ((inb->ptr + len) > inb->limit)
+		die("Premature end of data parsing flat device tree\n");
+
+	inbuf_init(subbuf, inb->ptr, inb->ptr + len);
+
+	inb->ptr += len;
+}
+
 static void flat_read_chunk(struct inbuf *inb, void *p, int len)
 {
 	if ((inb->ptr + len) > inb->limit)
@@ -704,6 +740,7 @@ static uint32_t flat_read_tag(struct inbuf *inb)
 		case FDT_NOP:
 		case FDT_END:
 		case FDT_PROPDATA_PHANDLE:
+		case FDT_PROPDATA_PHANDLE_REF:
 			return tag;
 		default:
 			break;
@@ -713,7 +750,7 @@ static uint32_t flat_read_tag(struct inbuf *inb)
 	die("Cannot skip unknown tag 0x%08x\n", tag);
 }
 
-static const char *flat_read_string(struct inbuf *inb)
+static const char *flat_read_string_norealign(struct inbuf *inb)
 {
 	int len = 0;
 	const char *p = inb->ptr;
@@ -728,6 +765,15 @@ static const char *flat_read_string(struct inbuf *inb)
 	str = inb->ptr;
 
 	inb->ptr += len;
+
+	return str;
+}
+
+static const char *flat_read_string(struct inbuf *inb)
+{
+	const char *str;
+
+	str = flat_read_string_norealign(inb);
 
 	flat_realign(inb, sizeof(uint32_t));
 
@@ -844,8 +890,11 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	struct property *prop = NULL;
 	struct node *node;
 	const char *flatname;
+	struct inbuf subbuf;
 	uint32_t val;
 	uint32_t offset;
+	uint32_t len;
+	const char *str;
 
 	node = build_node(NULL, NULL, NULL);
 
@@ -912,6 +961,33 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			/* Mark the offset as a local phandle reference */
 			m = alloc_marker(offset, REF_PHANDLE, NULL);
 			m->is_local = true;
+			prop->val = data_append_markers(prop->val, m);
+			break;
+
+		case FDT_PROPDATA_PHANDLE_REF:
+			if (!(flags & FTF_PROPDATA_PHANDLE))
+				die("PROPDATA_PHANDLE_REF tag found in flat tree"
+					" version <20\n");
+
+			if (!prop)
+				die("PROPDATA_PHANDLE_REF tag found without a previous PROP tag");
+
+			len = flat_read_word(dtbuf);
+			flat_read_subbuf(dtbuf, &subbuf, len);
+			flat_realign(dtbuf, sizeof(uint32_t));
+
+			offset = flat_read_word(&subbuf);
+			str = flat_read_string_norealign(&subbuf);
+
+			/*
+			 * A reference to a phandle is present in the property
+			 * Mark the whole property as TYPE_UINT32.
+			 */
+			property_add_marker(prop, TYPE_UINT32, 0, NULL);
+
+			/* Mark the offset as a external phandle reference */
+			m = alloc_marker(offset, REF_PHANDLE, xstrdup(str));
+			m->is_local = false;
 			prop->val = data_append_markers(prop->val, m);
 			break;
 

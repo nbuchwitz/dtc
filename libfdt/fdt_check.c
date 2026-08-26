@@ -22,6 +22,7 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 	int proplen;
 	bool expect_end = false;
 	const fdt32_t *pfdt32;
+	const char *str;
 	uint32_t val;
 
 	if (can_assume(PERFECT))
@@ -127,6 +128,39 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			tmp = fdt_node_offset_by_phandle(fdt, val);
 			if (tmp < 0)
 				return tmp;
+			break;
+
+		case FDT_PROPDATA_PHANDLE_REF:
+			/* Be sure that a property is available before this tag */
+			if (!prop)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			d = fdt_get_structured_tag_data(tag, fdt,
+							offset + FDT_TAGSIZE, NULL);
+			if (d < 0)
+				return d;
+
+			/* Retrieve the offset of the phandle in the property */
+			pfdt32 = fdt_offset_ptr(fdt, d, sizeof(*pfdt32));
+			if (!pfdt32)
+				return -FDT_ERR_BADSTRUCTURE;
+			tmp = fdt32_to_cpu(*pfdt32);
+
+			/* Check this offset */
+			if (tmp % sizeof(fdt32_t))
+				return -FDT_ERR_BADVALUE;
+			if ((uint32_t)proplen < tmp + sizeof(fdt32_t))
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* Retrieve the reference */
+			d += sizeof(fdt32_t);
+			str = fdt_offset_ptr(fdt, d, 1);
+			if (!str)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* Check that the reference is not an empty string */
+			if (!strlen(str))
+				return -FDT_ERR_BADVALUE;
 			break;
 
 		default:
