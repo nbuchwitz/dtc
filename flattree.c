@@ -1241,5 +1241,5 @@ struct dt_info *dt_from_blob(const char *fname)
 	if (get_subnode(tree, "__fixups__") || get_subnode(tree, "__local_fixups__"))
 		dtsflags |= DTSF_PLUGIN;
 
-	return build_dt_info(dtsflags, reservelist, tree, boot_cpuid_phys);
+	return build_dt_info(dtsflags, reservelist, tree, boot_cpuid_phys, NULL);
 }

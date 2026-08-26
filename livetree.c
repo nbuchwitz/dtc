@@ -635,7 +635,8 @@ static void complete_references(struct dt_info *dti)
 
 struct dt_info *build_dt_info(unsigned int dtsflags,
 			      struct reserve_info *reservelist,
-			      struct node *tree, uint32_t boot_cpuid_phys)
+			      struct node *tree, uint32_t boot_cpuid_phys,
+			      struct symbol *importsymlist)
 {
 	struct dt_info *dti;
 
@@ -644,6 +645,7 @@ struct dt_info *build_dt_info(unsigned int dtsflags,
 	dti->reservelist = reservelist;
 	dti->dt = tree;
 	dti->boot_cpuid_phys = boot_cpuid_phys;
+	dti->importsymlist = importsymlist;
 
 	fill_fullpaths(dti->dt, "");
 

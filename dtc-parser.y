@@ -113,7 +113,8 @@ sourcefile:
 	  headers memreserves devicetree
 		{
 			parser_output = build_dt_info($1, $2, $3,
-			                              guess_boot_cpuid($3));
+			                              guess_boot_cpuid($3),
+						      NULL);
 		}
 	;
 
