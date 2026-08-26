@@ -1,0 +1,32 @@
+/dts-v1/;
+/addon/;
+
+/import/ foo: "abc,foo";
+/import/ bar: "abc,bar";
+
+
+&foo.x {
+
+	addon-node {
+		ref0 = <&foo.x.y>;
+		ref1 = <0x0a &bar.other 0x14>;
+		ref2 = <&addon_node>;
+		ref3 = <&{$foo.x.y.z/addon-node}>;
+	};
+};
+
+&foo.x.y.z {
+
+	addon_node: addon-node {
+		prop = <0x00>;
+		phandle = <0x01>;
+	};
+};
+
+&foo.x.y {
+
+	node {
+		prop1 = <0x01>;
+		prop2 = <0x02>;
+	};
+};

@@ -1252,7 +1252,8 @@ metadata_tests() {
 		  metadata_addon_base metadata_exportsyms_local \
 		  metadata_exportsyms_ref metadata_importsyms \
 		  metadata_addon_orphan1 metadata_addon_orphan2 \
-		  metadata_addon_orphan3 metadata_addon_references; do
+		  metadata_addon_orphan3 metadata_addon_references \
+		  metadata_addon_refnamespace; do
 		run_dtc_test -I dts -O dts -o $dt.dts.dts "$SRCDIR/$dt.dts"
 		base_run_test check_diff $dt.dts.dts "$SRCDIR/$dt.dts.dts.expect"
 		run_dtc_test -I dts -O dtb -o $dt.dtb "$SRCDIR/$dt.dts"

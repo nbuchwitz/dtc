@@ -1,0 +1,29 @@
+/dts-v1/;
+/addon/;
+
+// [FDT_IMPORT_SYM] 'foo' (abc,foo)
+// [FDT_IMPORT_SYM] 'bar' (abc,bar)
+&foo.x {
+    addon-node {
+        ref0 = <0xffffffff>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref0[0], ref = foo.x.y
+        ref1 = <0x0000000a 0xffffffff 0x00000014>;
+        // [FDT_PROPDATA_PHANDLE_REF] ref1[4], ref = bar.other
+        ref2 = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref2[0]
+        ref3 = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref3[0]
+    };
+};
+&foo.x.y.z {
+    addon-node {
+        prop = <0x00000000>;
+        phandle = <0x00000001>;
+    };
+};
+&foo.x.y {
+    node {
+        prop1 = <0x00000001>;
+        prop2 = <0x00000002>;
+    };
+};
