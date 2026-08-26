@@ -123,6 +123,23 @@ struct fdt_property {
  */
 #define FDT_EXPORT_SYM	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2000)
 
+/*
+ * Export external symbol tag (meta-data). varlen: label, name
+ *
+ * It defines an exported symbol. It can be present in a node bloc meaning that
+ * a symbol is exported at this node level. The node pointed to by this symbol
+ * is not a local node (i.e. the node is not present in the device-tree blob.).
+ * This tag can be available only in overlay or addon device-tree blobs. The
+ * symbol has to be resolved when the device-tree blob is applied on top of a
+ * base device-tree.
+ *
+ * label: Label to use to resolve this symbol. This label is the reference to
+ *        the external phandle.
+ * name: export symbol name, i.e. the name used to reference this exported
+ *       symbol.
+ */
+#define FDT_EXPORT_SYM_REF FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2001)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))
