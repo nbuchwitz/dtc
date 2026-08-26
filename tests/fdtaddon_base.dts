@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ */
+
+/dts-v1/;
+
+/ {
+	base-node {
+		other_a: sub-node {
+			prop = <0>;
+		};
+	};
+
+	somewhere {
+		node_a1: node-a1 {
+			compatible = "abc,aaa";
+			/export/ node_a: &node_a1;
+			/export/ other: &other_a;
+		};
+		node_a2: node-a2 {
+			compatible = "abc,aaa";
+			/export/ node_a: &node_a2;
+			/export/ other: &other_a;
+		};
+	};
+};

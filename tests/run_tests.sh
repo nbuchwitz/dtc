@@ -1281,6 +1281,48 @@ metadata_tests() {
 	run_test check_full metadata_sort.dtb
 }
 
+run_fdtaddon_test () {
+	printf "fdtaddon $*:	"
+	base_run_test wrap_test $VALGRIND $FDTADDON "$@"
+}
+
+check_dtb () {
+	local dtb="$1"
+	base_run_test wrap_fdtdump "$dtb" "$dtb.out"
+	sed -i '/^\/\/ [^\[]/d' "$dtb.out"
+	base_run_test check_diff "$dtb.out" "$SRCDIR/$dtb.expect"
+	run_test check_full "$dtb"
+}
+
+check_dts () {
+	local dts="$1"
+	base_run_test check_diff "$dts" "$SRCDIR/$dts.expect"
+}
+
+fdtaddon_tests() {
+	run_dtc_test -I dts -O dtb -o fdtaddon_base.dtb "$SRCDIR/fdtaddon_base.dts"
+	check_dtb fdtaddon_base.dtb
+
+	for dt in fdtaddon_basics1; do
+		run_dtc_test -I dts -O dtb -o $dt.dtba "$SRCDIR/$dt.dtsa"
+		check_dtb $dt.dtba
+
+		run_fdtaddon_test -i fdtaddon_base.dtb -o $dt-merged1.dtb \
+				  -t "/somewhere/node-a1" $dt.dtba
+		check_dtb $dt-merged1.dtb
+
+		run_dtc_test -I dtb -O dts -o $dt-merged1.dtb.dts $dt-merged1.dtb
+		check_dts $dt-merged1.dtb.dts
+
+		run_fdtaddon_test -i fdtaddon_base.dtb -o $dt-merged2.dtb \
+				  -t "/somewhere/node-a2" $dt.dtba
+		check_dtb $dt-merged2.dtb
+
+		run_dtc_test -I dtb -O dts -o $dt-merged2.dtb.dts $dt-merged2.dtb
+		check_dts $dt-merged2.dtb.dts
+	done
+}
+
 pylibfdt_tests () {
     run_dtc_test -I dts -O dtb -o test_props.dtb "$SRCDIR/test_props.dts"
     TMP=/tmp/tests.stderr.$$
@@ -1320,7 +1362,7 @@ while getopts "vt:me" ARG ; do
 done
 
 if [ -z "$TESTSETS" ]; then
-    TESTSETS="libfdt utilfdt dtc dtbs_equal fdtget fdtput fdtdump fdtoverlay metadata"
+    TESTSETS="libfdt utilfdt dtc dtbs_equal fdtget fdtput fdtdump fdtoverlay metadata fdtaddon"
 
     # Test pylibfdt if the libfdt Python module is available.
     if ! $no_python; then
@@ -1362,6 +1404,9 @@ for set in $TESTSETS; do
 	    ;;
 	"metadata")
 	    metadata_tests
+	    ;;
+	"fdtaddon")
+	    fdtaddon_tests
 	    ;;
     esac
 done
