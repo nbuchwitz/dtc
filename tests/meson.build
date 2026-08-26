@@ -96,6 +96,7 @@ tests = [
   'truncated_string',
   'unterminated_memrsv',
   'utilfdt_test',
+  'wip_func',
 ]
 
 test_deps = [testutil_dep, util_dep, libfdt_dep]

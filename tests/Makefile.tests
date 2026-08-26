@@ -31,7 +31,8 @@ LIB_TESTS_L = get_mem_rsv \
 	check_path check_header check_full \
 	fs_tree1 \
 	truncated_property truncated_string \
-	truncated_memrsv unterminated_memrsv
+	truncated_memrsv unterminated_memrsv \
+	wip_func
 LIB_TESTS = $(LIB_TESTS_L:%=$(TESTS_PREFIX)%)
 
 ifneq ($(STATIC_BUILD),1)
