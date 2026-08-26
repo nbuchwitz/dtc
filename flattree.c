@@ -16,6 +16,7 @@
 #define FTF_DTFLAGS	0x80
 #define FTF_LCVERSW	0x100
 #define FTF_PROPDATA_PHANDLE	0x200
+#define FTF_EXPORT_IMPORT_SYM	0x400
 
 static struct version_info {
 	int version;
@@ -39,7 +40,7 @@ static struct version_info {
 	 FTF_LCVERSW},
 	{20, 18, 18, FDT_V20_SIZE,
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_DTFLAGS|
-	 FTF_LCVERSW|FTF_PROPDATA_PHANDLE},
+	 FTF_LCVERSW|FTF_PROPDATA_PHANDLE|FTF_EXPORT_IMPORT_SYM},
 };
 
 struct emitter {
@@ -52,6 +53,7 @@ struct emitter {
 	void (*property)(void *, struct label *labels);
 	void (*propdata_phandle)(void *);
 	void (*propdata_phandle_ref)(void *);
+	void (*export_sym)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -111,6 +113,11 @@ static void bin_emit_propdata_phandle_ref(void *e)
 	bin_emit_cell(e, FDT_PROPDATA_PHANDLE_REF);
 }
 
+static void bin_emit_export_sym(void *e)
+{
+	bin_emit_cell(e, FDT_EXPORT_SYM);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -121,6 +128,7 @@ static struct emitter bin_emitter = {
 	.property = bin_emit_property,
 	.propdata_phandle = bin_emit_propdata_phandle,
 	.propdata_phandle_ref = bin_emit_propdata_phandle_ref,
+	.export_sym = bin_emit_export_sym,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -248,6 +256,14 @@ static void asm_emit_propdata_phandle_ref(void *e)
 	asm_emit_cell(e, FDT_PROPDATA_PHANDLE_REF);
 }
 
+static void asm_emit_export_sym(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_EXPORT_SYM */\n");
+	asm_emit_cell(e, FDT_EXPORT_SYM);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -258,6 +274,7 @@ static struct emitter asm_emitter = {
 	.property = asm_emit_property,
 	.propdata_phandle = asm_emit_propdata_phandle,
 	.propdata_phandle_ref = asm_emit_propdata_phandle_ref,
+	.export_sym = asm_emit_export_sym,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -279,6 +296,7 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 			 void *etarget, struct data *strbuf,
 			 struct version_info *vi)
 {
+	struct symbol *exportsym;
 	struct property *prop;
 	struct node *child;
 	bool seen_name_prop = false;
@@ -295,6 +313,19 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 		emit->string(etarget, tree->name, 0);
 
 	emit->align(etarget, sizeof(cell_t));
+
+	if (vi->flags & FTF_EXPORT_IMPORT_SYM) {
+		for_each_symbol(tree->exportsymlist, exportsym) {
+			if (exportsym->is_local) {
+				emit->export_sym(etarget);
+				emit->cell(etarget, sizeof(cell_t) +
+					strlen(exportsym->name) + 1);
+				emit->cell(etarget, exportsym->phandle);
+				emit->string(etarget, exportsym->name, 0);
+				emit->align(etarget, sizeof(cell_t));
+			}
+		}
+	}
 
 	for_each_property(tree, prop) {
 		int nameoff;
@@ -747,6 +778,7 @@ static uint32_t flat_read_tag(struct inbuf *inb)
 		case FDT_END:
 		case FDT_PROPDATA_PHANDLE:
 		case FDT_PROPDATA_PHANDLE_REF:
+		case FDT_EXPORT_SYM:
 			return tag;
 		default:
 			break;
@@ -913,8 +945,10 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 		node->name = xstrdup(flatname);
 
 	do {
+		struct symbol *exportsym;
 		struct node *child;
 		struct marker *m;
+		cell_t phandle;
 
 		val = flat_read_tag(dtbuf);
 		switch (val) {
@@ -995,6 +1029,21 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			m = alloc_marker(offset, REF_PHANDLE, xstrdup(str));
 			m->is_local = false;
 			prop->val = data_append_markers(prop->val, m);
+			break;
+
+		case FDT_EXPORT_SYM:
+			if (!(flags & FTF_EXPORT_IMPORT_SYM))
+				die("FDT_EXPORT_SYM tag found in flat tree"
+					" version <20\n");
+			len = flat_read_word(dtbuf);
+			flat_read_subbuf(dtbuf, &subbuf, len);
+			flat_realign(dtbuf, sizeof(uint32_t));
+
+			phandle = flat_read_word(&subbuf);
+			str = flat_read_string_norealign(&subbuf);
+			exportsym = build_exportsym(str, NULL, phandle, NULL);
+			exportsym->is_local = true;
+			add_symbol(&node->exportsymlist, exportsym);
 			break;
 
 		default:
@@ -1120,7 +1169,7 @@ struct dt_info *dt_from_blob(const char *fname)
 		flags |= FTF_DTFLAGS | FTF_LCVERSW;
 
 	if (version >= 20) {
-		flags |= FTF_PROPDATA_PHANDLE;
+		flags |= FTF_PROPDATA_PHANDLE | FTF_EXPORT_IMPORT_SYM;
 		dtsflags |= fdt32_to_cpu(fdt->dt_flags) & FDT_FLAG_ADDON ?
 				DTSF_ADDON : 0;
 	}

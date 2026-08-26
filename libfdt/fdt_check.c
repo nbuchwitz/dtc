@@ -21,6 +21,7 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 	const char *propname;
 	int proplen;
 	bool expect_end = false;
+	bool subnode_found = false;
 	const fdt32_t *pfdt32;
 	const char *str;
 	uint32_t val;
@@ -63,6 +64,7 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 
 		case FDT_BEGIN_NODE:
 			prop = NULL;
+			subnode_found = false;
 			depth++;
 			if (depth > INT_MAX)
 				return -FDT_ERR_BADSTRUCTURE;
@@ -83,6 +85,7 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 
 		case FDT_END_NODE:
 			prop = NULL;
+			subnode_found = true;
 			if (depth == 0)
 				return -FDT_ERR_BADSTRUCTURE;
 			depth--;
@@ -161,6 +164,43 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			/* Check that the reference is not an empty string */
 			if (!strlen(str))
 				return -FDT_ERR_BADVALUE;
+			break;
+
+		case FDT_EXPORT_SYM:
+			/* Export symbols must be in a node */
+			if (depth == 0)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* and before any properties or subnodes */
+			if (prop || subnode_found)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			d = fdt_get_structured_tag_data(tag, fdt,
+							offset + FDT_TAGSIZE, NULL);
+			if (d < 0)
+				return d;
+
+			/* Retrieve the phandle value */
+			pfdt32 = fdt_offset_ptr(fdt, d, sizeof(*pfdt32));
+			if (!pfdt32)
+				return -FDT_ERR_BADSTRUCTURE;
+			val = fdt32_ld(pfdt32);
+
+			/* Check the phandle value */
+			tmp = fdt_node_offset_by_phandle(fdt, val);
+			if (tmp < 0)
+				return tmp;
+
+			/* Retrieve the export symbol name */
+			d += sizeof(fdt32_t);
+			str = fdt_offset_ptr(fdt, d, 1);
+			if (!str)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* Check that the name is not an empty string */
+			if (!strlen(str))
+				return -FDT_ERR_BADVALUE;
+
 			break;
 
 		default:

@@ -9,6 +9,7 @@
 
 #define FDT_ALIGN(x, a)		(((x) + (a) - 1) & ~((a) - 1))
 #define FDT_TAGALIGN(x)		(FDT_ALIGN((x), FDT_TAGSIZE))
+#define FDT_CELLALIGN(x)	(FDT_ALIGN((x), FDT_CELLSIZE))
 
 int32_t fdt_ro_probe_(const void *fdt);
 #define FDT_RO_PROBE(fdt)						\

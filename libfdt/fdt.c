@@ -308,6 +308,33 @@ static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffs
 		offset = sum;
 		break;
 
+	case FDT_EXPORT_SYM:
+		tmp_offset = fdt_get_structured_tag_data(tag, fdt, offset, &len);
+		if (tmp_offset < 0)
+			return FDT_END; /* premature end */
+
+		sum = tmp_offset + len;
+
+		/* Check phandle */
+		tmp32p = fdt_offset_ptr(fdt, tmp_offset, sizeof(*tmp32p));
+		if (!can_assume(VALID_DTB) && !tmp32p)
+			return FDT_END; /* premature end */
+		tmp_offset += sizeof(fdt32_t);
+
+		/* Check name */
+		do {
+			p = fdt_offset_ptr(fdt, tmp_offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+
+		if (!can_assume(VALID_INPUT) && (uint32_t)tmp_offset > sum)
+			return FDT_END; /* premature end */
+
+		/* Skip the whole data bloc */
+		offset = sum;
+		break;
+
 	default:
 		if (!(tag & FDT_TAG_STRUCTURED) || !(tag & FDT_TAG_SKIP_SAFE))
 			return FDT_END;
@@ -338,6 +365,7 @@ static bool fdt_tag_is_unknown(uint32_t tag)
 	case FDT_END:
 	case FDT_PROPDATA_PHANDLE:
 	case FDT_PROPDATA_PHANDLE_REF:
+	case FDT_EXPORT_SYM:
 		return false;
 	default:
 		break;
@@ -393,6 +421,7 @@ bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag)
 	switch (tag) {
 	case FDT_PROPDATA_PHANDLE:
 	case FDT_PROPDATA_PHANDLE_REF:
+	case FDT_EXPORT_SYM:
 		return true;
 
 	default:

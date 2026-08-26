@@ -289,6 +289,7 @@ struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle
 			       struct srcpos *srcpos);
 struct symbol *chain_symbol(struct symbol *first, struct symbol *list);
 struct symbol *reverse_symbol(struct symbol *list);
+void add_symbol(struct symbol **list, struct symbol *new);
 
 struct node *build_node(struct property *proplist, struct node *children,
 			struct symbol *exportsymlist, struct srcpos *srcpos);

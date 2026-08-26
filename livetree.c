@@ -74,7 +74,7 @@ struct symbol *reverse_symbol(struct symbol *list)
 	return head;
 }
 
-static void add_symbol(struct symbol **list, struct symbol *new)
+void add_symbol(struct symbol **list, struct symbol *new)
 {
 	struct symbol **s;
 

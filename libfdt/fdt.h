@@ -110,6 +110,19 @@ struct fdt_property {
  */
 #define FDT_PROPDATA_PHANDLE_REF  FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x1001)
 
+/*
+ * Export symbol tag (meta-data). varlen: name, phandle
+ *
+ * It defines an exported symbol. It can be present in a node bloc meaning that
+ * a symbol is exported at this node level. The node pointed to by this symbol
+ * is a local node and identified by a phandle value.
+ *
+ * phandle: phandle value identifying the node referenced by this symbol
+ * name: export symbol name, i.e. the name used to reference this exported
+ *       symbol.
+ */
+#define FDT_EXPORT_SYM	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2000)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))
