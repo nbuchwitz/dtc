@@ -612,12 +612,13 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 				     struct node *node)
 {
 	struct node *dt = dti->dt;
+	struct symbol *exportsym;
 	struct property *prop;
+	struct node *refnode;
+	cell_t phandle;
 
 	for_each_property(node, prop) {
 		struct marker *m = prop->val.markers;
-		struct node *refnode;
-		cell_t phandle;
 
 		for_each_marker_of_type(m, REF_PHANDLE) {
 			assert(m->offset + sizeof(cell_t) <= prop->val.len);
@@ -638,6 +639,25 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 
 			reference_node(refnode);
 		}
+	}
+
+	for_each_symbol(node->exportsymlist, exportsym) {
+		refnode = get_node_by_ref(dt, exportsym->ref);
+		if (!refnode) {
+			if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))) {
+				FAIL(c, dti, node,
+				     "Export \"%s\" references to non-existent node or label \"%s\"\n",
+				     exportsym->name, exportsym->ref);
+			}
+			exportsym->phandle = cpu_to_fdt32(0xffffffff);
+			continue;
+		}
+
+		/* Create the phandle property for this referenced node */
+		phandle = get_node_phandle(dt, refnode);
+		exportsym->phandle = phandle;
+
+		reference_node(refnode);
 	}
 }
 ERROR(phandle_references, fixup_phandle_references, NULL,
