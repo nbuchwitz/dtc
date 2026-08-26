@@ -10,6 +10,11 @@
 
 #include "libfdt_internal.h"
 
+struct fdt_addon_resolver {
+	const struct fdt_addon_resolver_ops *ops;
+	void *priv;
+};
+
 /**
  * fdt_skip_string - Skip a string
  * @fdt: device tree blob
@@ -568,21 +573,9 @@ static int fdt_resolve_symbol(const void *fdt, int target_node,
 	return -FDT_ERR_NOTFOUND;
 }
 
-/**
- * fdt_resolve_import - Resolve an imported symbol
- * @fdt: base device tree blob
- * @target_node: Target node offset in the base device tree blob containing
- *               the exported symbols used for the resolution.
- * @importsym_name: Import symbol name
- * @importsym_compatible: Import symbol compatible string
- *
- * returns:
- *      offset of the node matching the symbol after the resolution on success.
- *      Negative error code on failure.
- */
-static int fdt_resolve_import(const void *fdt, int target_node,
-				const char *importsym_name,
-				const char *importsym_compatible)
+int fdt_addon_resolve_default(const void *fdt, int target_node,
+			      const char *importsym_name,
+			      const char *importsym_compatible)
 {
 	/*
 	 * Do not check the import symbol compatible string against the found
@@ -602,6 +595,33 @@ static int fdt_resolve_import(const void *fdt, int target_node,
 	 */
 	return fdt_resolve_symbol(fdt, target_node, importsym_name,
 				  strlen(importsym_name));
+}
+
+/**
+ * fdt_resolve_import - Resolve an imported symbol
+ * @fdt: base device tree blob
+ * @target_node: Target node offset in the base device tree blob containing
+ *               the exported symbols used for the resolution.
+ * @importsym_name: Import symbol name
+ * @importsym_compatible: Import symbol compatible string
+ * @resolver: Custom resolver. If NULL, the default resolver is used.
+ *
+ * returns:
+ *      offset of the node matching the symbol after the resolution on success.
+ *      Negative error code on failure.
+ */
+static int fdt_resolve_import(const void *fdt, int target_node,
+			      const char *importsym_name,
+			      const char *importsym_compatible,
+			      const struct fdt_addon_resolver *resolver)
+{
+	if (resolver)
+		return resolver->ops->resolve(resolver->priv, fdt, target_node,
+					      importsym_name,
+					      importsym_compatible);
+
+	return fdt_addon_resolve_default(fdt, target_node, importsym_name,
+					 importsym_compatible);
 }
 
 static int fdt_check_importsym_offset(const void *fdt, int offset, int *data_offset)
@@ -709,6 +729,7 @@ static const char *fdt_importsym_get_compatible(const void *fdt, int offset)
  *               resolution.
  * @sym_name: Symbol name
  * @sym_namelen: Length of the symbol name
+ * @resolver: Custom resolver, NULL to use the default resolver.
  *
  * addon_resolve_symbol() resolved a symbol used by an addon using the import
  * symbol table available in the addon device tree blob.
@@ -719,7 +740,8 @@ static const char *fdt_importsym_get_compatible(const void *fdt, int offset)
  *      Negative error code on failure.
  */
 static int addon_resolve_symbol(const void *fdta, const void *fdt, int target_node,
-				const char *sym_name, size_t sym_namelen)
+				const char *sym_name, size_t sym_namelen,
+				const struct fdt_addon_resolver *resolver)
 {
 	const char *importsym_compat;
 	const char *importsym_name;
@@ -739,7 +761,7 @@ static int addon_resolve_symbol(const void *fdta, const void *fdt, int target_no
 			continue;
 
 		return fdt_resolve_import(fdt, target_node, importsym_name,
-					  importsym_compat);
+					  importsym_compat, resolver);
 	}
 	/* Not found ... */
 	return -FDT_ERR_NOTFOUND;
@@ -753,6 +775,7 @@ static int addon_resolve_symbol(const void *fdta, const void *fdt, int target_no
  *               device tree blob, must have exported symbols needed for the
  *               resolution.
  * @ref: The reference to resolve
+ * @resolver: Custom resolver, NULL to use the default resolver
  *
  * addon_resolve_ref() resolves a reference used by an addon.
  * A reference can be composed of several symbols separated by a '.' char.
@@ -769,7 +792,8 @@ static int addon_resolve_symbol(const void *fdta, const void *fdt, int target_no
  *      Negative error code on failure.
  */
 static int addon_resolve_ref(const void *fdta, const void *fdt, int target_node,
-			     const char *ref)
+			     const char *ref,
+			     const struct fdt_addon_resolver *resolver)
 {
 	const char *end = ref + strlen(ref);
 	const char *r = ref;
@@ -794,7 +818,8 @@ static int addon_resolve_ref(const void *fdta, const void *fdt, int target_node,
 			d = end;
 
 		if (r == ref)
-			tmp_node = addon_resolve_symbol(fdta, fdt, tmp_node, r, d-r);
+			tmp_node = addon_resolve_symbol(fdta, fdt, tmp_node, r, d-r,
+				   resolver);
 		else
 			tmp_node = fdt_resolve_symbol(fdt, tmp_node, r, d-r);
 
@@ -812,6 +837,7 @@ static int addon_resolve_ref(const void *fdta, const void *fdt, int target_node,
  * @fdta: Addon device tree blob
  * @fdt: Device tree blob the addon is going to be applied to
  * @target_node: Offset of the node in fdt the addon is going to be applied to
+ * @resolver: Custom resolver. NULL to use the default resolver
  *
  * addon_resolve_phandles() resolved unresolved phandle symbols available in
  * the addon.
@@ -820,7 +846,8 @@ static int addon_resolve_ref(const void *fdta, const void *fdt, int target_node,
  *      0 on success
  *      Negative error code on failure
  */
-static int addon_resolve_phandles(void *fdta, const void *fdt, int target_node)
+static int addon_resolve_phandles(void *fdta, const void *fdt, int target_node,
+				  const struct fdt_addon_resolver *resolver)
 {
 	int offset, next_offset, d;
 	int last_prop_offset = -1;
@@ -880,7 +907,8 @@ static int addon_resolve_phandles(void *fdta, const void *fdt, int target_node)
 			ref = fdt_offset_ptr(fdta, d, 1);
 
 			/* Resolve this phandle */
-			ref_node = addon_resolve_ref(fdta, fdt, target_node, ref);
+			ref_node = addon_resolve_ref(fdta, fdt, target_node, ref,
+						     resolver);
 			if (ref_node < 0)
 				return ref_node;
 
@@ -931,7 +959,8 @@ static int addon_resolve_phandles(void *fdta, const void *fdt, int target_node)
 			ref = fdt_offset_ptr(fdta, d, 1);
 
 			/* Resolve the phandle */
-			ref_node = addon_resolve_ref(fdta, fdt, target_node, ref);
+			ref_node = addon_resolve_ref(fdta, fdt, target_node,
+						     ref, resolver);
 			if (ref_node < 0)
 				return ref_node;
 
@@ -1153,6 +1182,7 @@ static const char *fdt_orphan_get_ref(const void *fdt, int offset)
  * @fdt: Base Device Tree blob
  * @target_node: Target node in the base device tree the addon is going to be
  *               applied to
+ * @resolver: Custom resolver, NULL to use the default resolver
  *
  * Checks recursively if applying fdta overwrites phandle values in the base
  * fdt. When such a phandle is found, the fdta is changed to use the fdt's
@@ -1163,7 +1193,8 @@ static const char *fdt_orphan_get_ref(const void *fdt, int offset)
  *      Negative error code on failure
  */
 static int addon_prevent_phandles_overwrite(void *fdta, const void *fdt,
-					    int target_node)
+					    int target_node,
+					    const struct fdt_addon_resolver *resolver)
 {
 	int fdt_orphan_target;
 	int addon_root_node;
@@ -1187,7 +1218,8 @@ static int addon_prevent_phandles_overwrite(void *fdta, const void *fdt,
 		if (!ref)
 			return -FDT_ERR_BADSTRUCTURE;
 
-		fdt_orphan_target = addon_resolve_ref(fdta, fdt, target_node, ref);
+		fdt_orphan_target = addon_resolve_ref(fdta, fdt, target_node,
+						      ref, resolver);
 		if (fdt_orphan_target < 0)
 			return fdt_orphan_target;
 
@@ -1505,6 +1537,7 @@ static int addon_merge_node_properties(const void *fdta, int fdta_node,
  * @target_path: Path in the base Device Tree to the node where the addon is
  *		 applied to. This is the node where export symbols used for symbol
  *		 resolution are present.
+ * @resolver: Custom resolver. NULL to use the default resolver.
  *
  * returns:
  *      0 on success
@@ -1512,7 +1545,8 @@ static int addon_merge_node_properties(const void *fdta, int fdta_node,
  */
 static int addon_merge_node_exports(const void *fdta, int fdta_node,
 				    void *fdt, int fdt_node,
-				    bool is_existing_node, const char *target_path)
+				    bool is_existing_node, const char *target_path,
+				    const struct fdt_addon_resolver *resolver)
 {
 	const char *exportsym_name;
 	const char *exportsym_ref;
@@ -1554,7 +1588,8 @@ static int addon_merge_node_exports(const void *fdta, int fdta_node,
 				return target_node;
 
 			/* Resolve the reference */
-			ref_node = addon_resolve_ref(fdta, fdt, target_node, exportsym_ref);
+			ref_node = addon_resolve_ref(fdta, fdt, target_node,
+						     exportsym_ref, resolver);
 			if (ref_node < 0)
 				return ref_node;
 
@@ -1591,6 +1626,7 @@ static int addon_merge_node_exports(const void *fdta, int fdta_node,
  * @target_path: Path in the base Device Tree to the node where the addon is
  *		 applied to. This is the node where export symbols used for symbol
  *		 resolution are present.
+ * @resolver: Custom resolver, NULL to use the default resolver.
  *
  * returns:
  *      0 on success
@@ -1598,7 +1634,8 @@ static int addon_merge_node_exports(const void *fdta, int fdta_node,
  */
 static int addon_merge_node(const void *fdta, int fdta_node, void *fdt,
 			    int fdt_node, bool is_existing_node,
-			    const char *target_path)
+			    const char *target_path,
+			    const struct fdt_addon_resolver *resolver)
 {
 	bool is_existing;
 	int fdta_subnode;
@@ -1607,7 +1644,8 @@ static int addon_merge_node(const void *fdta, int fdta_node, void *fdt,
 	int ret;
 
 	ret = addon_merge_node_exports(fdta, fdta_node, fdt, fdt_node,
-				       is_existing_node, target_path);
+				       is_existing_node, target_path,
+				       resolver);
 	if (ret)
 		return ret;
 
@@ -1632,7 +1670,7 @@ static int addon_merge_node(const void *fdta, int fdta_node, void *fdt,
 			return fdt_subnode;
 
 		ret = addon_merge_node(fdta, fdta_subnode, fdt, fdt_subnode,
-				       is_existing, target_path);
+				       is_existing, target_path, resolver);
 		if (ret)
 			return ret;
 	}
@@ -1640,7 +1678,8 @@ static int addon_merge_node(const void *fdta, int fdta_node, void *fdt,
 	return 0;
 }
 
-static int addon_merge(void *fdta, void *fdt, const char *target_path)
+static int addon_merge(void *fdta, void *fdt, const char *target_path,
+		       const struct fdt_addon_resolver *resolver)
 {
 	int fdt_orphan_target;
 	int fdta_orphan;
@@ -1654,7 +1693,8 @@ static int addon_merge(void *fdta, void *fdt, const char *target_path)
 		return target_node;
 
 	/* Merge the addon root node into the base target_node */
-	ret = addon_merge_node(fdta, 0, fdt, target_node, true, target_path);
+	ret = addon_merge_node(fdta, 0, fdt, target_node, true, target_path,
+			       resolver);
 	if (ret < 0)
 		return ret;
 
@@ -1663,12 +1703,13 @@ static int addon_merge(void *fdta, void *fdt, const char *target_path)
 		if (!ref)
 			return -FDT_ERR_BADSTRUCTURE;
 
-		fdt_orphan_target = addon_resolve_ref(fdta, fdt, target_node, ref);
+		fdt_orphan_target = addon_resolve_ref(fdta, fdt, target_node,
+						      ref, resolver);
 		if (fdt_orphan_target < 0)
 			return fdt_orphan_target;
 
 		ret = addon_merge_node(fdta, fdta_orphan, fdt, fdt_orphan_target,
-				       true, target_path);
+				       true, target_path, resolver);
 		if (ret < 0)
 			return ret;
 
@@ -1688,8 +1729,12 @@ static int addon_merge(void *fdta, void *fdt, const char *target_path)
 	return 0;
 }
 
-int fdt_addon_apply(void *fdt, void *fdta, const char *target)
+int fdt_addon_apply_resolver(void *fdt, void *fdta, const char *target,
+			     const struct fdt_addon_resolver_ops *resolver_ops,
+			     void *resolver_priv)
 {
+	struct fdt_addon_resolver *resolver = NULL;
+	struct fdt_addon_resolver custom_resolver;
 	int target_node;
 	uint32_t delta;
 	int ret;
@@ -1697,10 +1742,24 @@ int fdt_addon_apply(void *fdt, void *fdta, const char *target)
 	FDT_RO_PROBE(fdt);
 	FDT_RO_PROBE(fdta);
 
+	if (resolver_ops) {
+		/* Initialize the custom resolver */
+		custom_resolver.ops = resolver_ops;
+		custom_resolver.priv = resolver_priv;
+		/* This custom resolver is the resolver used */
+		resolver = &custom_resolver;
+	}
+
 	/* Get the target node */
 	target_node = fdt_path_offset(fdt, target);
 	if (target_node < 0)
 		return target_node;
+
+	if (resolver && resolver->ops->validate) {
+		ret = resolver->ops->validate(resolver->priv, fdt, target_node);
+		if (ret < 0)
+			return ret;
+	}
 
 	ret = fdt_find_max_phandle(fdt, &delta);
 	if (ret)
@@ -1712,16 +1771,16 @@ int fdt_addon_apply(void *fdt, void *fdta, const char *target)
 		goto err;
 
 	/* Resolve phandles */
-	ret = addon_resolve_phandles(fdta, fdt, target_node);
+	ret = addon_resolve_phandles(fdta, fdt, target_node, resolver);
 	if (ret < 0)
 		goto err;
 
 	/* Don't overwrite phandles in fdt */
-	ret = addon_prevent_phandles_overwrite(fdta, fdt, target_node);
+	ret = addon_prevent_phandles_overwrite(fdta, fdt, target_node, resolver);
 	if (ret < 0)
 		goto err;
 
-	ret = addon_merge(fdta, fdt, target);
+	ret = addon_merge(fdta, fdt, target, resolver);
 	if (ret < 0)
 		goto err;
 
@@ -1738,4 +1797,9 @@ err:
 	fdt_set_magic(fdt, ~0);
 
 	return ret;
+}
+
+int fdt_addon_apply(void *fdt, void *fdta, const char *target)
+{
+	return fdt_addon_apply_resolver(fdt, fdta, target, NULL, NULL);
 }

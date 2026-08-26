@@ -2545,7 +2545,8 @@ int fdt_overlay_target_offset(const void *fdt, const void *fdto,
  * @target: target node path
  *
  * fdt_addon_apply() will apply the given device tree addon on the given target
- * node in base device tree.
+ * node in base device tree. fdt_addon_apply() uses the default resolver to
+ * resolve symbols.
  *
  * Expect the base device tree to be modified, even if the function
  * returns an error.
@@ -2569,6 +2570,101 @@ int fdt_overlay_target_offset(const void *fdt, const void *fdto,
  *	-FDT_ERR_TRUNCATED, standard meanings
  */
 int fdt_addon_apply(void *fdt, void *fdta, const char *target);
+
+#ifndef SWIG /* Not available in Python */
+struct fdt_addon_resolver_ops {
+	/**
+	 * Validate function (optional)
+	 * @priv: Private data
+	 * @fdt: fdt blob to look for validation
+	 * @target_node: Target node offset the addon is applied to
+	 *
+	 * If non NULL, this function is called soon when an addon is applied
+	 * and allows the resolver to perform some internal checks. If NULL,
+	 * no resolver validation takes place and the applying process continues
+	 * its operations.
+	 *
+	 * Return 0 if the validation of the resolver succeed. Negative error
+	 * code on failure. On failure, the addon applying process is aborted.
+	 * and the negative error code returned by this function is returned from
+	 * the function applying the addon.
+	 */
+	int (*validate)(void *priv, const void *fdt, int target_node);
+
+	/**
+	 * Resolve function (mandatory)
+	 * @priv: Private data
+	 * @fdt: fdt blob to look for importsym matching node
+	 * @target_node: Target node offset the addon is applied to
+	 * @importsym_name: Import symbol name
+	 * @importsym_compatible: Import symbol compatible string
+	 *
+	 * Return the node offset in fdt blob of the node matching the import
+	 * symbol (identified by its name and compatible string) after the
+	 * resolution on success. Negative error code on failure.
+	 */
+	int (*resolve)(void *priv, const void *fdt, int target_node,
+		       const char *importsym_name,
+		       const char *importsym_compatible);
+};
+
+/**
+ * fdt_resolve_default - Default libfdt resolver.
+ * @fdt: base device tree blob
+ * @target_node: Target node offset in the base device tree blob containing
+ *               the exported symbols used for the resolution.
+ * @importsym_name: Import symbol name
+ * @importsym_compatible: Import symbol compatible string
+ *
+ * The default libfdt resolver search for a matching node in export symbols
+ * available at the @target_node. The @importsym_compatible string is not used.
+ *
+ * returns:
+ *      offset of the node matching the symbol after the resolution on success.
+ *      Negative error code on failure.
+ */
+int fdt_addon_resolve_default(const void *fdt, int target_node,
+			      const char *importsym_name,
+			      const char *importsym_compatible);
+
+
+/**
+ * fdt_addon_apply_resolver - Applies a DT addon on a base DT using the provided
+ * revolver.
+ * @fdt: pointer to the base device tree blob
+ * @fdta: pointer to the device tree addon blob
+ * @target: target node path
+ * @resolver_ops: Resolver operations to use, NULL to use the default resolver.
+ * @resolver_priv: Private data passed to function provided by resolver_ops
+ *
+ * fdt_addon_apply() will apply the given device tree addon on the given target
+ * node in base device tree.
+ *
+ * Expect the base device tree to be modified, even if the function
+ * returns an error.
+ *
+ * returns:
+ *	0, on success
+ *	-FDT_ERR_NOSPACE, there's not enough space in the base device tree
+ *	-FDT_ERR_NOTFOUND, the overlay points to some nonexistent nodes or
+ *		properties in the base DT
+ *	-FDT_ERR_BADPHANDLE,
+ *	-FDT_ERR_BADOVERLAY,
+ *	-FDT_ERR_NOPHANDLES,
+ *	-FDT_ERR_INTERNAL,
+ *	-FDT_ERR_BADLAYOUT,
+ *	-FDT_ERR_BADMAGIC,
+ *	-FDT_ERR_BADOFFSET,
+ *	-FDT_ERR_BADPATH,
+ *	-FDT_ERR_BADVERSION,
+ *	-FDT_ERR_BADSTRUCTURE,
+ *	-FDT_ERR_BADSTATE,
+ *	-FDT_ERR_TRUNCATED, standard meanings
+ */
+int fdt_addon_apply_resolver(void *fdt, void *fdta, const char *target,
+			     const struct fdt_addon_resolver_ops *resolver_ops,
+			     void *resolver_priv);
+#endif /* SWIG */
 
 /**********************************************************************/
 /* Debugging / informational functions                                */
