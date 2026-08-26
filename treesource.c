@@ -431,6 +431,7 @@ static void write_tree_source_node(FILE *f, struct node *tree, int level)
 void dt_to_source(FILE *f, struct dt_info *dti)
 {
 	struct reserve_info *re;
+	struct symbol *importsym;
 
 	fprintf(f, "/dts-v1/;\n");
 	/*
@@ -451,6 +452,15 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 		fprintf(f, "/memreserve/\t0x%016llx 0x%016llx;\n",
 			(unsigned long long)re->address,
 			(unsigned long long)re->size);
+	}
+
+	if (dti->importsymlist) {
+		for_each_symbol(dti->importsymlist, importsym) {
+			fprintf(f, "/import/ %s: \"%s\";\n",
+				importsym->name,
+				importsym->compatible);
+		}
+		fprintf(f, "\n");
 	}
 
 	write_tree_source_node(f, dti->dt, 0);
