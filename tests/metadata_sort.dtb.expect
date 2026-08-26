@@ -1,0 +1,15 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    node-a {
+        // [FDT_EXPORT_SYM] 'a' -> phandle 0x00000001
+        // [FDT_EXPORT_SYM] 'ba' -> phandle 0x00000001
+        // [FDT_EXPORT_SYM] 'bb' -> phandle 0x00000001
+        prop_a = <0x000001c8>;
+        prop_b = <0x0000007b>;
+    };
+    node-b {
+        phandle = <0x00000001>;
+    };
+};

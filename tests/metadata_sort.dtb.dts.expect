@@ -1,0 +1,18 @@
+/dts-v1/;
+/addon/;
+
+/ {
+
+	node-a {
+		prop_a = <0x1c8>;
+		prop_b = <0x7b>;
+
+		/export/ a: &{/node-b};
+		/export/ ba: &{/node-b};
+		/export/ bb: &{/node-b};
+	};
+
+	node-b {
+		phandle = <0x01>;
+	};
+};
