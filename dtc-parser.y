@@ -132,7 +132,7 @@ sourcefile:
 		{
 			parser_output = build_dt_info($1, $2, $3,
 			                              guess_boot_cpuid($3),
-						      NULL);
+						      NULL, NULL);
 		}
 	|  headers memreserves importlist devicetree
 		{
@@ -143,7 +143,7 @@ sourcefile:
 			 */
 			parser_output = build_dt_info($1, $2, $4,
 			                              $4 ? guess_boot_cpuid($4) : 0,
-			                              reverse_symbol($3));
+			                              reverse_symbol($3), NULL);
 		}
 	;
 

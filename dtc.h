@@ -250,6 +250,8 @@ struct node {
 	const struct bus_type *bus;
 	struct srcpos *srcpos;
 
+	char *ref; /* Use only for orphan nodes */
+
 	bool omit_if_unused, is_referenced;
 };
 
@@ -276,6 +278,9 @@ struct node {
 
 #define for_each_symbol(s0, s) \
 	for ((s) = (s0); (s); (s) = (s)->next)
+
+#define for_each_orphan(o0, o) \
+	for ((o) = (o0); (o); (o) = (o)->next_sibling)
 
 void add_label(struct label **labels, char *label);
 void delete_labels(struct label **labels);
@@ -345,6 +350,7 @@ struct dt_info {
 	uint32_t boot_cpuid_phys;
 	struct node *dt;		/* the device tree */
 	struct symbol *importsymlist;	/* Import symbol list */
+	struct node *orphanlist;	/* orphan nodes list */
 	const char *outname;		/* filename being written to, "-" for stdout */
 };
 
@@ -357,6 +363,7 @@ struct property *get_property_by_label(struct dt_info *dti, const char *label,
 				       struct node **node);
 struct marker *get_marker_label(struct dt_info *dti, const char *label,
 				struct node **node, struct property **prop);
+bool node_is_orphan(struct dt_info *dti, const struct node *node);
 
 /* DTS version flags definitions */
 #define DTSF_V1		0x0001	/* /dts-v1/ */
@@ -366,7 +373,8 @@ struct marker *get_marker_label(struct dt_info *dti, const char *label,
 struct dt_info *build_dt_info(unsigned int dtsflags,
 			      struct reserve_info *reservelist,
 			      struct node *tree, uint32_t boot_cpuid_phys,
-			      struct symbol *importsymlist);
+			      struct symbol *importsymlist,
+			      struct node *orphanlist);
 void sort_tree(struct dt_info *dti);
 void generate_labels_from_tree(struct dt_info *dti, const char *name);
 void generate_label_tree(struct dt_info *dti, const char *name, bool allocph);

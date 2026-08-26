@@ -656,7 +656,8 @@ static void complete_references(struct dt_info *dti)
 struct dt_info *build_dt_info(unsigned int dtsflags,
 			      struct reserve_info *reservelist,
 			      struct node *tree, uint32_t boot_cpuid_phys,
-			      struct symbol *importsymlist)
+			      struct symbol *importsymlist,
+			      struct node *orphanlist)
 {
 	struct dt_info *dti;
 
@@ -666,6 +667,7 @@ struct dt_info *build_dt_info(unsigned int dtsflags,
 	dti->dt = tree;
 	dti->boot_cpuid_phys = boot_cpuid_phys;
 	dti->importsymlist = importsymlist;
+	dti->orphanlist = orphanlist;
 
 	fill_fullpaths(dti);
 
@@ -950,6 +952,18 @@ struct node *get_node_by_ref(struct dt_info *dti, const char *ref)
 	}
 
 	return NULL;
+}
+
+bool node_is_orphan(struct dt_info *dti, const struct node *node)
+{
+	struct node *orphan;
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		if (orphan == node)
+			return true;
+	}
+
+	return false;
 }
 
 struct property *get_property_by_label(struct dt_info *dti, const char *label,
