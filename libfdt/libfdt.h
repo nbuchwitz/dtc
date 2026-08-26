@@ -2538,6 +2538,38 @@ int fdt_overlay_apply(void *fdt, void *fdto);
 int fdt_overlay_target_offset(const void *fdt, const void *fdto,
 			      int fragment_offset, char const **pathp);
 
+/**
+ * fdt_addon_apply - Applies a DT addon on a base DT
+ * @fdt: pointer to the base device tree blob
+ * @fdta: pointer to the device tree addon blob
+ * @target: target node path
+ *
+ * fdt_addon_apply() will apply the given device tree addon on the given target
+ * node in base device tree.
+ *
+ * Expect the base device tree to be modified, even if the function
+ * returns an error.
+ *
+ * returns:
+ *	0, on success
+ *	-FDT_ERR_NOSPACE, there's not enough space in the base device tree
+ *	-FDT_ERR_NOTFOUND, the overlay points to some nonexistent nodes or
+ *		properties in the base DT
+ *	-FDT_ERR_BADPHANDLE,
+ *	-FDT_ERR_BADOVERLAY,
+ *	-FDT_ERR_NOPHANDLES,
+ *	-FDT_ERR_INTERNAL,
+ *	-FDT_ERR_BADLAYOUT,
+ *	-FDT_ERR_BADMAGIC,
+ *	-FDT_ERR_BADOFFSET,
+ *	-FDT_ERR_BADPATH,
+ *	-FDT_ERR_BADVERSION,
+ *	-FDT_ERR_BADSTRUCTURE,
+ *	-FDT_ERR_BADSTATE,
+ *	-FDT_ERR_TRUNCATED, standard meanings
+ */
+int fdt_addon_apply(void *fdt, void *fdta, const char *target);
+
 /**********************************************************************/
 /* Debugging / informational functions                                */
 /**********************************************************************/

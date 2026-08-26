@@ -83,6 +83,7 @@ LIBFDT_1.2 {
 		fdt_overlay_target_offset;
 		fdt_get_symbol;
 		fdt_get_symbol_namelen;
+		fdt_addon_apply;
 	local:
 		*;
 };

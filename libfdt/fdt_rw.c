@@ -553,6 +553,75 @@ int fdt_delprop(void *fdt, int nodeoffset, const char *name)
 	return fdt_splice_struct_(fdt, prop, proplen, 0);
 }
 
+int fdt_mark_property_phandle_(void *fdt, int fdt_property, uint32_t propoffset)
+{
+	fdt32_t *markerp;
+	int nextoffset;
+	int err;
+
+	FDT_RW_PROBE(fdt);
+
+	nextoffset = fdt_check_prop_offset_(fdt, fdt_property);
+	if (nextoffset < 0)
+		return nextoffset;
+
+	/* Insert the marker at next_offset, i.e. right after the property */
+	markerp = fdt_offset_ptr_w_(fdt, nextoffset);
+	err = fdt_splice_struct_(fdt, markerp, 0, FDT_TAGSIZE + FDT_CELLSIZE);
+	if (err)
+		return err;
+
+	*(markerp++) = cpu_to_fdt32(FDT_PROPDATA_PHANDLE);
+	*markerp = cpu_to_fdt32(propoffset);
+
+	return 0;
+}
+
+int fdt_add_exportsym_(void *fdt, int nodeoffset, const char *name,
+		       uint32_t phandle)
+{
+	int namelen, exportlen, datalen;
+	int nextoffset;
+	char *p;
+	int err;
+
+	FDT_RW_PROBE(fdt);
+
+	nextoffset = fdt_check_node_offset_(fdt, nodeoffset);
+	if (nextoffset < 0)
+		return nextoffset;
+
+	/*
+	 * nextoffset it at the first tag after the node.
+	 * Skip possible unknown tags and metadata tags related to the node in
+	 * order to add the new export sym tag after those tags.
+	 */
+	nextoffset = fdt_node_skip_unknown_and_metadata_tags(fdt, nextoffset);
+	if (nextoffset < 0)
+		return nextoffset;
+
+
+	p = fdt_offset_ptr_w_(fdt, nextoffset);
+	namelen = strlen(name);
+	datalen = FDT_CELLSIZE + namelen + 1;
+	exportlen = FDT_TAGSIZE + FDT_CELLSIZE + FDT_CELLALIGN(datalen);
+
+	err = fdt_splice_struct_(fdt, p, 0, exportlen);
+	if (err)
+		return err;
+
+	*((fdt32_t *)p) = cpu_to_fdt32(FDT_EXPORT_SYM);
+	p += FDT_TAGSIZE;
+	*((fdt32_t *)p) = cpu_to_fdt32(datalen);
+	p += FDT_CELLSIZE;
+	*((fdt32_t *)p) = cpu_to_fdt32(phandle);
+	p += FDT_CELLSIZE;
+	memset(p, 0, FDT_CELLALIGN(namelen+1));
+	memcpy(p, name, namelen);
+
+	return 0;
+}
+
 int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 			    const char *name, int namelen)
 {

@@ -51,6 +51,11 @@ static inline int fdt_getprop_offset(const void *fdt, int nodeoffset,
 	return fdt_getprop_offset_namelen(fdt, nodeoffset, name, strlen(name));
 }
 
+int fdt_mark_property_phandle_(void *fdt, int fdt_property,
+			       uint32_t propoffset);
+int fdt_add_exportsym_(void *fdt, int nodeoffset, const char *name,
+		       uint32_t phandle);
+
 const char *fdt_find_string_len_(const char *strtab, int tabsize, const char *s,
 				 int s_len);
 static inline const char *fdt_find_string_(const char *strtab, int tabsize,
