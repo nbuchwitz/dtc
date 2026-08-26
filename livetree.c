@@ -1333,6 +1333,34 @@ static void sort_importsyms(struct dt_info *dti)
 	free(tbl);
 }
 
+static void sort_orphans(struct dt_info *dti)
+{
+	int n = 0, i = 0;
+	struct node *orphan, **tbl;
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		sort_node(orphan);
+		n++;
+	}
+
+	if (n == 0)
+		return;
+
+	tbl = xmalloc(n * sizeof(*tbl));
+
+	for_each_orphan(dti->orphanlist, orphan)
+		tbl[i++] = orphan;
+
+	qsort(tbl, n, sizeof(*tbl), cmp_subnode);
+
+	dti->orphanlist = tbl[0];
+	for (i = 0; i < (n-1); i++)
+		tbl[i]->next_sibling = tbl[i+1];
+	tbl[n-1]->next_sibling = NULL;
+
+	free(tbl);
+}
+
 void sort_tree(struct dt_info *dti)
 {
 	sort_reserve_entries(dti);
@@ -1340,6 +1368,8 @@ void sort_tree(struct dt_info *dti)
 
 	if (dti->dt)
 		sort_node(dti->dt);
+
+	sort_orphans(dti);
 }
 
 /* utility helper to avoid code duplication */
