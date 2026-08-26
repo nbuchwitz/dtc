@@ -1,0 +1,15 @@
+/dts-v1/;
+/addon/;
+
+// [FDT_IMPORT_SYM] 'node_a' (abc,aaa)
+// [FDT_IMPORT_SYM] 'other' ()
+&node_a {
+    addon-node {
+        prop = "node_a";
+    };
+};
+&other {
+    addon-node {
+        prop = "other";
+    };
+};

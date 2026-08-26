@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ */
+
+/dts-v1/;
+
+/ {
+	base-node {
+		sub_node: sub-node {
+			prop = <0>;
+		};
+	};
+
+	somewhere {
+		/*
+		 * Nodes are referenced, either by path or by symbol, by the
+		 * custom resolver available in the fdt_addon tool.
+		 *
+		 * Nodes referenced by symbols need to have the symbol exported
+		 * here (i.e. in the node where the addon is applied to).
+		 *
+		 * For nodes referenced by path by the custom resolver, this is
+		 * not strictly necessary but we need to ensure that DTC will
+		 * create the phandle property for those nodes.
+		 *
+		 * DTC creates phandles when a node is referenced in the dts
+		 * compiled by DTC. Using the /export/ keyword is a good way
+		 * to ensure this reference and so to have the phandle created.
+		 * Even if the exported symbol is not used (path instead of
+		 * symbol), this ensures the phandle creation by DTC.
+		 */
+		/export/ node_a1: &node_a1;
+		/export/ node_a2: &node_a2;
+		/export/ sub_node: &sub_node;
+		/export/ node_b1: &node_b1;
+		/export/ node_b2: &node_b2;
+
+		node_a1: node-a1 {
+			compatible = "abc,aaa";
+		};
+		node_a2: node-a2 {
+			compatible = "abc,aaa";
+		};
+		node_b1: node-b1 {
+			compatible = "abc,bbb";
+		};
+		node_b2: node-b2 {
+			compatible = "abc,bbb";
+		};
+	};
+};

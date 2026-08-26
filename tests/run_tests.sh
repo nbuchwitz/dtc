@@ -1369,6 +1369,31 @@ fdtaddon_tests() {
 	run_dtc_test -I dtb -O dts -o fdtaddon_stack_2nd-merged.dtb.dts fdtaddon_stack_2nd-merged.dtb
 	check_dts fdtaddon_stack_2nd-merged.dtb.dts
 
+	# Custom resolver
+	run_dtc_test -I dts -O dtb -o fdtaddon_base_custom_resolver.dtb "$SRCDIR/fdtaddon_base_custom_resolver.dts"
+	check_dtb fdtaddon_base_custom_resolver.dtb
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_addon_custom_resolver_node_a.dtba "$SRCDIR/fdtaddon_addon_custom_resolver_node_a.dtsa"
+	check_dtb fdtaddon_addon_custom_resolver_node_a.dtba
+
+	run_fdtaddon_test -i fdtaddon_base_custom_resolver.dtb -o fdtaddon_addon_custom_resolver_node_a-merged.dtb \
+			  -t "/somewhere" \
+			  -e "node_a=&node_a1" \
+			  -e "other=&{/base-node/sub-node}" \
+			  fdtaddon_addon_custom_resolver_node_a.dtba
+	check_dtb fdtaddon_addon_custom_resolver_node_a-merged.dtb
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_addon_custom_resolver_node_ab.dtba "$SRCDIR/fdtaddon_addon_custom_resolver_node_ab.dtsa"
+	check_dtb fdtaddon_addon_custom_resolver_node_ab.dtba
+
+	run_fdtaddon_test -i fdtaddon_base_custom_resolver.dtb -o fdtaddon_addon_custom_resolver_node_ab-merged.dtb \
+			  -t "/somewhere" \
+			  -e "node_a=&{/somewhere/node-a2}" \
+			  -e "node_b=&node_b1" \
+			  -e "other=&sub_node" \
+			  fdtaddon_addon_custom_resolver_node_ab.dtba
+	check_dtb fdtaddon_addon_custom_resolver_node_ab-merged.dtb
+
 	# More realistic dts and dtsa input files
 	run_dtc_test -I dts -O dtb -o fdtaddon_realistic_base.dtb "$SRCDIR/fdtaddon_realistic_base.dts"
 	check_dtb fdtaddon_realistic_base.dtb
