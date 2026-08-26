@@ -206,7 +206,8 @@ static int nextprop_(const void *fdt, int offset)
 	int nextoffset;
 
 	do {
-		tag = fdt_next_tag(fdt, offset, &nextoffset);
+		tag = fdt_next_tag_filter(fdt, offset, &nextoffset,
+					  fdt_tag_filter_skip_metadata, NULL);
 
 		switch (tag) {
 		case FDT_END:

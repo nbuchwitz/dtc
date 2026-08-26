@@ -23,6 +23,14 @@ int32_t fdt_ro_probe_(const void *fdt);
 uint32_t fdt_next_tag_(const void *fdt, int startoffset, int *nextoffset,
 		       bool *is_unknown);
 
+uint32_t fdt_next_tag_filter(const void *fdt, int offset, int *nextoffset,
+			     bool (*tag_filter)(void *priv, uint32_t tag),
+			     void *priv);
+
+bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag);
+
+bool fdt_tag_is_property_metadata(uint32_t tag);
+
 int fdt_get_structured_tag_data(uint32_t tag, const void *fdt, int offset,
 				uint32_t *data_len);
 
@@ -31,6 +39,8 @@ int fdt_check_prop_offset_(const void *fdt, int offset);
 
 int fdt_prop_remove_unknown_tags(void *fdt, bool force_inplace,
 				 int prop_offset, bool downgrade_version);
+int fdt_prop_remove_metadata_tags(void *fdt, bool force_inplace,
+				  int prop_offset);
 
 int fdt_getprop_offset_namelen(const void *fdt, int nodeoffset,
 			       const char *name, int namelen);

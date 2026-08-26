@@ -323,6 +323,33 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 	return fdt_next_tag_(fdt, startoffset, nextoffset, NULL);
 }
 
+uint32_t fdt_next_tag_filter(const void *fdt, int offset, int *nextoffset,
+			     bool (*tag_filter)(void *priv, uint32_t tag),
+			     void *priv)
+{
+	int startoffset = offset;
+	uint32_t tag;
+
+	tag = fdt_next_tag_(fdt, startoffset, nextoffset, NULL);
+	if (tag == FDT_END)
+		return tag;
+
+	if (tag_filter(priv, tag))
+		return FDT_NOP;
+
+	return tag;
+}
+
+bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag)
+{
+	return false;
+}
+
+bool fdt_tag_is_property_metadata(uint32_t tag)
+{
+	return false;
+}
+
 int fdt_check_node_offset_(const void *fdt, int offset)
 {
 	if (!can_assume(VALID_INPUT)
@@ -355,7 +382,8 @@ int fdt_root_offset(const void *fdt)
 
 	do {
 		offset = nextoffset;
-		tag = fdt_next_tag(fdt, offset, &nextoffset);
+		tag = fdt_next_tag_filter(fdt, offset, &nextoffset,
+					  fdt_tag_filter_skip_metadata, NULL);
 		switch (tag) {
 		case FDT_END_NODE:
 		case FDT_PROP:
@@ -393,8 +421,8 @@ int fdt_next_node(const void *fdt, int offset, int *depth)
 
 	do {
 		offset = nextoffset;
-		tag = fdt_next_tag(fdt, offset, &nextoffset);
-
+		tag = fdt_next_tag_filter(fdt, offset, &nextoffset,
+					  fdt_tag_filter_skip_metadata, NULL);
 		switch (tag) {
 		case FDT_PROP:
 		case FDT_NOP:

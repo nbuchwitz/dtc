@@ -259,6 +259,42 @@ int fdt_prop_remove_unknown_tags(void *fdt, bool force_inplace,
 	return 0;
 }
 
+int fdt_prop_remove_metadata_tags(void *fdt, bool force_inplace,
+				  int prop_offset)
+{
+	int nextoffset, offset;
+	uint32_t tag;
+
+	/*
+	 * Only inplace using nopify is supported even if we could use an other
+	 * method involving splices if force_inplace is set to false.
+	 */
+
+	tag = fdt_next_tag(fdt, prop_offset, &nextoffset);
+	if (tag == FDT_END)
+		return nextoffset;
+
+	/*
+	 * Look at all tags related to the current property. I.e. tags after the
+	 * current property and before either the next property, a sub-node  or
+	 * the end of current node
+	 */
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag(fdt, offset, &nextoffset);
+		if (tag == FDT_END)
+			return nextoffset;
+
+		/* Remove metadata tags related to the property */
+		if (fdt_tag_is_property_metadata(tag))
+			fdt_nopify_area(fdt, offset, nextoffset);
+
+	} while ((tag != FDT_PROP) && (tag != FDT_BEGIN_NODE) &&
+		 (tag != FDT_END_NODE));
+
+	return 0;
+}
+
 static int fdt_resize_property_(void *fdt, int nodeoffset,
 				const char *name, int namelen,
 				int len, struct fdt_property **prop)
@@ -273,10 +309,18 @@ static int fdt_resize_property_(void *fdt, int nodeoffset,
 		return oldlen;
 
 	/*
-	 * The property is resized. Remove possible unknown tags related to the
-	 * property downgrading the dtb version.
+	 * The property is resized and data are going to be modified. Remove
+	 * property metadata tags
 	 */
 	prop_offset = fdt_ptr_offset_(fdt, *prop);
+	err = fdt_prop_remove_metadata_tags(fdt, false, prop_offset);
+	if (err)
+		return err;
+
+	/*
+	 * Remove also possible unknown tags related to the property downgrading
+	 * the dtb version.
+	 */
 	err = fdt_prop_remove_unknown_tags(fdt, false, prop_offset, true);
 	if (err)
 		return err;
@@ -289,7 +333,7 @@ static int fdt_resize_property_(void *fdt, int nodeoffset,
 	return 0;
 }
 
-static int fdt_node_skip_unknown_tags(void *fdt, int next)
+static int fdt_node_skip_unknown_and_metadata_tags(void *fdt, int next)
 {
 	int nextoffset = next;
 	int offset;
@@ -299,6 +343,7 @@ static int fdt_node_skip_unknown_tags(void *fdt, int next)
 	 * Skip all tags related to the current node. I.e. tags after the
 	 * current node and before either the next property, a sub-node or the
 	 * end of current node.
+	 * FDT_NOP, unknown tags and potential node metadata tags are skipped.
 	 */
 	do {
 		offset = nextoffset;
@@ -332,10 +377,10 @@ static int fdt_add_property_(void *fdt, int nodeoffset, const char *name,
 
 	/*
 	 * nextoffset it at the first tag after the node.
-	 * Skip possible unknown tags related to the node in order to add the
-	 * property after those tags.
+	 * Skip possible unknown tags and metadata tags related to the node in
+	 * order to add the property after those tags.
 	 */
-	nextoffset = fdt_node_skip_unknown_tags(fdt, nextoffset);
+	nextoffset = fdt_node_skip_unknown_and_metadata_tags(fdt, nextoffset);
 	if (nextoffset < 0)
 		return nextoffset;
 
@@ -453,6 +498,12 @@ int fdt_appendprop(void *fdt, int nodeoffset, const char *name,
 		if (err)
 			return err;
 
+		/*
+		 * We append data to the property. If known metadata tags are
+		 * present, they are related to existing data and not impacted
+		 * by data added. No need to remove them.
+		 */
+
 		newlen = len + oldlen;
 		err = fdt_splice_struct_(fdt, prop->data,
 					 FDT_TAGALIGN(oldlen),
@@ -484,11 +535,16 @@ int fdt_delprop(void *fdt, int nodeoffset, const char *name)
 	if (!prop)
 		return len;
 
-	/*
-	 * The property is going to be removed. Remove also possible unknown
-	 * tags related to this property. Keep the dtb version unchanged.
-	 */
+	/* The property is going to be removed. Remove its metadata tags */
 	prop_offset = fdt_ptr_offset_(fdt, prop);
+	err = fdt_prop_remove_metadata_tags(fdt, false, prop_offset);
+	if (err)
+		return err;
+
+	/*
+	 * Remove also possible unknown tags related to this property.
+	 * Keep the dtb version unchanged.
+	 */
 	err = fdt_prop_remove_unknown_tags(fdt, false, prop_offset, false);
 	if (err)
 		return err;
@@ -522,10 +578,15 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 		return offset;
 
 	/*
-	 * Try to place the new node after the parent's properties and unknown
-	 * tags related to those properties.
-	 * Unknown tags are reported as FDT_NOP tags by fdt_next_tag.
-	 * Skipping FDT_NOP tags will correctly skip unknown tags.
+	 * Try to place the new node after:
+	 *  - the parent's properties
+	 *  - the metadata tags related to those properties
+	 *  - unknown tags related to those properties.
+	 * Unknown tags are reported as FDT_NOP tags by fdt_next_tag_filter.
+	 * metadata tags are also reported as FDT_NOP by fdt_next_tag_filter
+	 * thanks to the filter function used.
+	 * Skipping FDT_NOP tags will correctly skip unknown tags and metadata
+	 * tags.
 	 */
 	tag = fdt_next_tag(fdt, parentoffset, &nextoffset);
 	/* the fdt_subnode_offset_namelen() should ensure this never hits */
@@ -533,7 +594,8 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 		return -FDT_ERR_INTERNAL;
 	do {
 		offset = nextoffset;
-		tag = fdt_next_tag(fdt, offset, &nextoffset);
+		tag = fdt_next_tag_filter(fdt, offset, &nextoffset,
+					  fdt_tag_filter_skip_metadata, NULL);
 	} while ((tag == FDT_PROP) || (tag == FDT_NOP));
 
 	nh = fdt_offset_ptr_w_(fdt, offset);
