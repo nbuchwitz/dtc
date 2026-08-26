@@ -24,6 +24,8 @@ extern void yyerror(char const *s);
 extern struct dt_info *parser_output;
 extern bool treesource_error;
 
+unsigned int last_header_flags;
+
 static bool is_ref_relative(const char *ref)
 {
 	return ref[0] != '/' && strchr(&ref[1], '/');
@@ -122,14 +124,17 @@ header:
 	  DT_V1 ';'
 		{
 			$$ = DTSF_V1;
+			last_header_flags = $$;
 		}
 	| DT_V1 ';' DT_PLUGIN ';'
 		{
 			$$ = DTSF_V1 | DTSF_PLUGIN;
+			last_header_flags = $$;
 		}
 	| DT_V1 ';' DT_ADDON ';'
 		{
 			$$ = DTSF_V1 | DTSF_ADDON;
+			last_header_flags = $$;
 		}
 	;
 
@@ -179,12 +184,7 @@ devicetree:
 		}
 	| dt_ref nodedef
 		{
-			/*
-			 * We rely on the rule being always:
-			 *   versioninfo plugindecl memreserves devicetree
-			 * so $-1 is what we want (plugindecl)
-			 */
-			if (!($<flags>-1 & DTSF_PLUGIN))
+			if (!(last_header_flags & DTSF_PLUGIN))
 				ERROR(&@2, "Label or path %s not found", $1);
 			else if (is_ref_relative($1))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $1);
@@ -197,7 +197,7 @@ devicetree:
 		{
 			struct node *target = get_node_by_ref($1, $3);
 
-			if (($<flags>-1 & DTSF_PLUGIN) && is_ref_relative($3))
+			if ((last_header_flags & DTSF_PLUGIN) && is_ref_relative($3))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $3);
 
 			if (target) {
@@ -209,12 +209,7 @@ devicetree:
 		}
 	| devicetree DT_PATH_REF nodedef
 		{
-			/*
-			 * We rely on the rule being always:
-			 *   versioninfo plugindecl memreserves devicetree
-			 * so $-1 is what we want (plugindecl)
-			 */
-			if ($<flags>-1 & DTSF_PLUGIN) {
+			if (last_header_flags & DTSF_PLUGIN) {
 				if (is_ref_relative($2))
 					ERROR(&@2, "Label-relative reference %s not supported in plugin", $2);
 				add_orphan_node($1, $3, $2);
@@ -235,12 +230,7 @@ devicetree:
 			if (target) {
 				merge_nodes(target, $3);
 			} else {
-				/*
-				 * We rely on the rule being always:
-				 *   versioninfo plugindecl memreserves devicetree
-				 * so $-1 is what we want (plugindecl)
-				 */
-				if ($<flags>-1 & DTSF_PLUGIN)
+				if (last_header_flags & DTSF_PLUGIN)
 					add_orphan_node($1, $3, $2);
 				else
 					ERROR(&@2, "Label or path %s not found", $2);
