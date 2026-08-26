@@ -575,7 +575,7 @@ static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
 	 */
 
 	if (*ref) {
-		refnode = get_node_by_ref(dti->dt, *ref);
+		refnode = get_node_by_ref(dti, *ref);
 		if (refnode)
 			*is_local = true;
 		else
@@ -860,7 +860,7 @@ static struct node *get_node_by_phandle_(struct node *tree, cell_t phandle)
 	return NULL;
 }
 
-struct node *get_node_by_ref(struct node *tree, const char *ref)
+static struct node *get_node_by_ref_(struct node *tree, const char *ref)
 {
 	struct node *target = tree;
 	const char *label = NULL, *path = NULL;
@@ -924,6 +924,19 @@ struct node *get_node_by_phandle(struct dt_info *dti, cell_t phandle)
 
 	if (dti->dt) {
 		node = get_node_by_phandle_(dti->dt, phandle);
+		if (node)
+			return node;
+	}
+
+	return NULL;
+}
+
+struct node *get_node_by_ref(struct dt_info *dti, const char *ref)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_ref_(dti->dt, ref);
 		if (node)
 			return node;
 	}
@@ -1283,7 +1296,7 @@ static bool any_fixup_tree(struct dt_info *dti, struct node *node)
 	for_each_property(node, prop) {
 		m = prop->val.markers;
 		for_each_marker_of_type(m, REF_PHANDLE) {
-			if (!get_node_by_ref(dti->dt, m->ref))
+			if (!get_node_by_ref_(dti->dt, m->ref))
 				return true;
 		}
 	}
@@ -1339,7 +1352,7 @@ static int generate_fixups_tree_internal(struct dt_info *dti,
 	for_each_property(node, prop) {
 		m = prop->val.markers;
 		for_each_marker_of_type(m, REF_PHANDLE) {
-			refnode = get_node_by_ref(dt, m->ref);
+			refnode = get_node_by_ref_(dt, m->ref);
 			if (!refnode)
 				if (add_fixup_entry(dti, fn, node, prop, m))
 					ret = -1;
@@ -1362,7 +1375,7 @@ static bool any_local_fixup_tree(struct dt_info *dti, struct node *node)
 	for_each_property(node, prop) {
 		m = prop->val.markers;
 		for_each_marker_of_type(m, REF_PHANDLE) {
-			if (get_node_by_ref(dti->dt, m->ref))
+			if (get_node_by_ref_(dti->dt, m->ref))
 				return true;
 		}
 	}
@@ -1423,7 +1436,7 @@ static int generate_local_fixups_tree_internal(struct dt_info *dti,
 	for_each_property(node, prop) {
 		m = prop->val.markers;
 		for_each_marker_of_type(m, REF_PHANDLE) {
-			refnode = get_node_by_ref(dt, m->ref);
+			refnode = get_node_by_ref_(dt, m->ref);
 			if (refnode)
 				if (add_local_fixup_entry(dti, lfn, node, prop, m, refnode))
 					ret = -1;

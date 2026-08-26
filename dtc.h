@@ -323,7 +323,6 @@ struct property *get_property_by_label(struct node *tree, const char *label,
 struct marker *get_marker_label(struct node *tree, const char *label,
 				struct node **node, struct property **prop);
 struct node *get_subnode(struct node *node, const char *nodename);
-struct node *get_node_by_ref(struct node *tree, const char *ref);
 cell_t get_node_phandle(struct node *root, struct node *node);
 
 uint32_t guess_boot_cpuid(struct node *tree);
@@ -357,6 +356,7 @@ struct dt_info {
 struct node *get_node_by_path(struct dt_info *dti, const char *path);
 struct node *get_node_by_label(struct dt_info *dti, const char *label);
 struct node *get_node_by_phandle(struct dt_info *dti, cell_t phandle);
+struct node *get_node_by_ref(struct dt_info *dti, const char *ref);
 
 /* DTS version flags definitions */
 #define DTSF_V1		0x0001	/* /dts-v1/ */

@@ -31,6 +31,18 @@ static bool is_ref_relative(const char *ref)
 	return ref[0] != '/' && strchr(&ref[1], '/');
 }
 
+static struct node *parser_get_node_by_ref(struct node *dt, const char *ref)
+{
+	/*
+	 * Use a temporary dt_info in order to use dti_get_node_by_ref()
+	 */
+	struct dt_info dti = {};
+
+	dti.dt = dt;
+
+	return get_node_by_ref(&dti, ref);
+}
+
 %}
 
 %union {
@@ -240,7 +252,7 @@ devicetree:
 		}
 	| devicetree DT_LABEL dt_ref nodedef
 		{
-			struct node *target = get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref($1, $3);
 
 			if ((last_header_flags & DTSF_PLUGIN) && is_ref_relative($3))
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $3);
@@ -259,7 +271,7 @@ devicetree:
 					ERROR(&@2, "Label-relative reference %s not supported in plugin", $2);
 				add_orphan_node($1, $3, $2);
 			} else {
-				struct node *target = get_node_by_ref($1, $2);
+				struct node *target = parser_get_node_by_ref($1, $2);
 
 				if (target)
 					merge_nodes(target, $3);
@@ -270,7 +282,7 @@ devicetree:
 		}
 	| devicetree DT_LABEL_REF nodedef
 		{
-			struct node *target = get_node_by_ref($1, $2);
+			struct node *target = parser_get_node_by_ref($1, $2);
 
 			if (target) {
 				merge_nodes(target, $3);
@@ -284,7 +296,7 @@ devicetree:
 		}
 	| devicetree DT_DEL_NODE dt_ref ';'
 		{
-			struct node *target = get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref($1, $3);
 
 			if (target)
 				delete_node(target);
@@ -296,7 +308,7 @@ devicetree:
 		}
 	| devicetree DT_OMIT_NO_REF dt_ref ';'
 		{
-			struct node *target = get_node_by_ref($1, $3);
+			struct node *target = parser_get_node_by_ref($1, $3);
 
 			if (target)
 				omit_node_if_unused(target);
