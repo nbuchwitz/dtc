@@ -1,0 +1,37 @@
+/dts-v1/;
+
+/ {
+    base-node {
+        sub-node {
+            prop = <0x00000000>;
+            phandle = <0x00000002>;
+            sub-node {
+                phandle = <0x00000004>;
+                prop = <0x00000001>;
+            };
+        };
+    };
+    somewhere {
+        node-a1 {
+            // [FDT_EXPORT_SYM] 'node_a' -> phandle 0x00000001
+            // [FDT_EXPORT_SYM] 'other' -> phandle 0x00000002
+            compatible = "abc,aaa";
+            phandle = <0x00000001>;
+        };
+        node-a2 {
+            // [FDT_EXPORT_SYM] 'node_a' -> phandle 0x00000003
+            // [FDT_EXPORT_SYM] 'other' -> phandle 0x00000002
+            compatible = "abc,aaa";
+            phandle = <0x00000003>;
+            addon-node {
+                ref-other-subnode = <0x00000004>;
+                // [FDT_PROPDATA_PHANDLE] ref-other-subnode[0]
+                ref-other2 = <0x00000002>;
+                // [FDT_PROPDATA_PHANDLE] ref-other2[0]
+                ref-other1 = <0x00000002 0x0000000a>;
+                // [FDT_PROPDATA_PHANDLE] ref-other1[0]
+                prop = <0x00000000>;
+            };
+        };
+    };
+};
