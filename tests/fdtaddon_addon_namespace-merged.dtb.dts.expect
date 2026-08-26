@@ -1,0 +1,57 @@
+/dts-v1/;
+
+/ {
+
+	other_n1 {
+		prop = <0x00>;
+		phandle = <0x05>;
+
+		/export/ a: &{/other-a};
+		/export/ b: &{/other-b};
+	};
+
+	other-a {
+		prop = <0x00>;
+		phandle = <0x01>;
+
+		addon-node-1a {
+			phandle = <0x06>;
+			prop = <0x1a>;
+		};
+	};
+
+	other-b {
+		prop = <0x00>;
+		phandle = <0x02>;
+
+		/export/ x: &{/other-x};
+	};
+
+	other-x {
+		prop = <0x00>;
+		phandle = <0x03>;
+
+		addon-node-1bx {
+			phandle = <0x07>;
+			prop = <0x1b>;
+		};
+	};
+
+	node {
+		compatible = "abc,aaa";
+		phandle = <0x04>;
+
+		/export/ node: &{/node};
+		/export/ n1: &{/other_n1};
+
+		addon-node2 {
+			ref-addon-n1bx = <&{/other-x/addon-node-1bx}>;
+			ref-n1bx = <&{/other-x}>;
+		};
+
+		addon-node1 {
+			ref-addon-n1a = <&{/other-a/addon-node-1a}>;
+			ref-n1a = <&{/other-a}>;
+		};
+	};
+};

@@ -1334,6 +1334,19 @@ fdtaddon_tests() {
 			  -t "/base-node" fdtaddon_addon_prop_existing_ok.dtba
 	check_dtb fdtaddon_addon_prop_existing_ok-merged.dtb
 
+	# Test namespace label reference
+	run_dtc_test -I dts -O dtb -o fdtaddon_base_namespace.dtb "$SRCDIR/fdtaddon_base_namespace.dts"
+	check_dtb fdtaddon_base_namespace.dtb
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_addon_namespace.dtba "$SRCDIR/fdtaddon_addon_namespace.dtsa"
+	check_dtb fdtaddon_addon_namespace.dtba
+
+	run_fdtaddon_test -i fdtaddon_base_namespace.dtb -o fdtaddon_addon_namespace-merged.dtb \
+			  -t "/node" fdtaddon_addon_namespace.dtba
+	check_dtb fdtaddon_addon_namespace-merged.dtb
+
+	run_dtc_test -I dtb -O dts -o fdtaddon_addon_namespace-merged.dtb.dts fdtaddon_addon_namespace-merged.dtb
+	check_dts fdtaddon_addon_namespace-merged.dtb.dts
 }
 
 pylibfdt_tests () {

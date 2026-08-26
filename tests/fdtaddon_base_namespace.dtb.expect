@@ -1,0 +1,29 @@
+/dts-v1/;
+
+/ {
+    other_n1 {
+        // [FDT_EXPORT_SYM] 'a' -> phandle 0x00000001
+        // [FDT_EXPORT_SYM] 'b' -> phandle 0x00000002
+        prop = <0x00000000>;
+        phandle = <0x00000005>;
+    };
+    other-a {
+        prop = <0x00000000>;
+        phandle = <0x00000001>;
+    };
+    other-b {
+        // [FDT_EXPORT_SYM] 'x' -> phandle 0x00000003
+        prop = <0x00000000>;
+        phandle = <0x00000002>;
+    };
+    other-x {
+        prop = <0x00000000>;
+        phandle = <0x00000003>;
+    };
+    node {
+        // [FDT_EXPORT_SYM] 'node' -> phandle 0x00000004
+        // [FDT_EXPORT_SYM] 'n1' -> phandle 0x00000005
+        compatible = "abc,aaa";
+        phandle = <0x00000004>;
+    };
+};

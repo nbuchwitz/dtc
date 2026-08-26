@@ -1,0 +1,49 @@
+/dts-v1/;
+
+/ {
+    other_n1 {
+        // [FDT_EXPORT_SYM] 'a' -> phandle 0x00000001
+        // [FDT_EXPORT_SYM] 'b' -> phandle 0x00000002
+        prop = <0x00000000>;
+        phandle = <0x00000005>;
+    };
+    other-a {
+        prop = <0x00000000>;
+        phandle = <0x00000001>;
+        addon-node-1a {
+            phandle = <0x00000006>;
+            prop = <0x0000001a>;
+        };
+    };
+    other-b {
+        // [FDT_EXPORT_SYM] 'x' -> phandle 0x00000003
+        prop = <0x00000000>;
+        phandle = <0x00000002>;
+    };
+    other-x {
+        prop = <0x00000000>;
+        phandle = <0x00000003>;
+        addon-node-1bx {
+            phandle = <0x00000007>;
+            prop = <0x0000001b>;
+        };
+    };
+    node {
+        // [FDT_EXPORT_SYM] 'node' -> phandle 0x00000004
+        // [FDT_EXPORT_SYM] 'n1' -> phandle 0x00000005
+        compatible = "abc,aaa";
+        phandle = <0x00000004>;
+        addon-node2 {
+            ref-addon-n1bx = <0x00000007>;
+            // [FDT_PROPDATA_PHANDLE] ref-addon-n1bx[0]
+            ref-n1bx = <0x00000003>;
+            // [FDT_PROPDATA_PHANDLE] ref-n1bx[0]
+        };
+        addon-node1 {
+            ref-addon-n1a = <0x00000006>;
+            // [FDT_PROPDATA_PHANDLE] ref-addon-n1a[0]
+            ref-n1a = <0x00000001>;
+            // [FDT_PROPDATA_PHANDLE] ref-n1a[0]
+        };
+    };
+};
