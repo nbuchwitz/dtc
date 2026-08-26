@@ -926,6 +926,14 @@ dtc_tests () {
     sed -i '/dt_flags/!d' dtflags_default.dtb.out
     base_run_test check_diff dtflags_default.dtb.out "$SRCDIR/dtflags_default.dtb.expect"
     run_test check_full dtflags_default.dtb
+
+    # Tests dt_flags header field (FDT_FLAG_ADDON value)
+    run_dtc_test -I dts -O dtb -o dtflags_addon.dtb "$SRCDIR/dtflags_addon.dts"
+    base_run_test wrap_fdtdump dtflags_addon.dtb dtflags_addon.dtb.out
+    # Keep only lines containing 'dt_flags'
+    sed -i '/dt_flags/!d' dtflags_addon.dtb.out
+    base_run_test check_diff dtflags_addon.dtb.out "$SRCDIR/dtflags_addon.dtb.expect"
+    run_test check_full dtflags_addon.dtb
 }
 
 cmp_tests () {
