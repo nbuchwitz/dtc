@@ -584,11 +584,15 @@ static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
 	 * phandle value is available) but not the reference.
 	 *
 	 * Complete both ref and is_local based on existing values.
+	 *
+	 * Also take care of references pointing to an orphan node. Those
+	 * reference are not local references. Indeed, an orphan node is an
+	 * external node.
 	 */
 
 	if (*ref) {
 		refnode = get_node_by_ref(dti, *ref);
-		if (refnode)
+		if (refnode && !node_is_orphan(dti, refnode))
 			*is_local = true;
 		else
 			*is_local = false;
@@ -655,7 +659,12 @@ static void complete_references_internal(struct dt_info *dti, struct node *node)
 
 static void complete_references(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	complete_references_internal(dti, dti->dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		complete_references_internal(dti, orphan);
 }
 
 struct dt_info *build_dt_info(unsigned int dtsflags,
