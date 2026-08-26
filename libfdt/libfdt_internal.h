@@ -20,6 +20,9 @@ int32_t fdt_ro_probe_(const void *fdt);
 		}							\
 	}
 
+uint32_t fdt_next_tag_(const void *fdt, int startoffset, int *nextoffset,
+		       bool *is_unknown);
+
 int fdt_check_node_offset_(const void *fdt, int offset);
 int fdt_check_prop_offset_(const void *fdt, int offset);
 
