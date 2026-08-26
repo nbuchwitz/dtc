@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ */
+
+/dts-v1/;
+
+/ {
+	conn_a_5v: regulator {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpios = <&gpio1 5 0>;
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		i2c1: i2c@1000 {
+			compatible = "xyz,i2c-controller";
+			reg = <0x1000 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		gpio1: gpio@2000 {
+			compatible = "xyz,gpio-controller";
+			reg = <0x2000 0x100>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			#address-cells = <0>; /* interrupt-map usage */
+		};
+
+		gpio2: gpio@3000 {
+			compatible = "xyz,gpio-controller";
+			reg = <0x3000 0x100>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			#address-cells = <0>; /* interrupt-map usage */
+		};
+	};
+
+	conn_a: connector-a {
+		compatible = "abc,foo-connector";
+		#address-cells = <0>;
+		#interrupt-cells = <2>;
+		interrupt-map = <0 0     &gpio1 10 0>,
+				<0 0x100 &gpio1 10 0x100>,
+				<1 0     &gpio2 3 0>,
+				<1 0x100 &gpio2 3 0x100>;
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xf 0x0>;
+		gpio-map-pass-thru = <0x0 0xf>;
+		gpio-map = <0 0 &gpio1 10 0>,
+			   <1 0 &gpio2 3 0>;
+
+		/export/ connector: &conn_a;
+		/export/ conn_i2c: &conn_a_i2c;
+		/export/ conn_5v: &conn_a_5v;
+
+		conn_a_i2c: conn-i2c {
+			compatible = "i2c-bus-extension";
+			i2c-parent = <&i2c1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};

@@ -1,0 +1,32 @@
+/dts-v1/;
+/addon/;
+
+// [FDT_IMPORT_SYM] 'connector' (abc,foo-connector)
+// [FDT_IMPORT_SYM] 'conn_5v' ()
+&connector {
+    conn-i2c {
+        gpio@23 {
+            compatible = "xxx,expander-io";
+            reg = <0x00000023>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-parent = <0xffffffff>;
+            // [FDT_PROPDATA_PHANDLE_REF] interrupt-parent[0], ref = connector
+            interrupts = <0x00000000 0x00000100>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            vcc1-supply = <0xffffffff>;
+            // [FDT_PROPDATA_PHANDLE_REF] vcc1-supply[0], ref = conn_5v
+            vcc2-supply = <0xffffffff>;
+            // [FDT_PROPDATA_PHANDLE_REF] vcc2-supply[0], ref = connector.conn_5v
+            reset-gpios = <0xffffffff 0x00000001 0x00000000>;
+            // [FDT_PROPDATA_PHANDLE_REF] reset-gpios[0], ref = connector
+        };
+    };
+};
+&connector.conn_i2c {
+    eeprom@51 {
+        compatible = "xxx,eeprom";
+        reg = <0x00000051>;
+    };
+};

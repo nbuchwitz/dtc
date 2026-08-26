@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ */
+
+/dts-v1/;
+/addon/;
+
+/import/ connector: "abc,foo-connector";
+/import/ conn_5v: "";
+
+&connector {
+	/*
+	 * Add a gpio expander at the conn-i2c node (i2c extension bus)
+	 * available at the connector node
+	 */
+	conn-i2c {
+		gpio@23 {
+			compatible = "xxx,expander-io";
+			reg = <0x23>;
+			gpio-controller;
+			#gpio-cells = <2>;
+
+			/* Use the connector interrupt number 0 */
+			interrupt-parent = <&connector>;
+			interrupts = <0 0x100>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			/* Use 5V power-supply wired to the connector */
+			vcc1-supply = <&conn_5v>; /* Need to be an imported symbol */
+			vcc2-supply = <&connector.conn_5v>; /* Only connector need to be imported */
+
+			/* Use the connector gpio number 1 */
+			reset-gpios = <&connector 1 0>;
+		};
+	};
+};
+
+/*
+ * Use namespace reference to add an EEPROM at i2c bus connected
+ * to the connector. It can be an i2c extension or the i2c controller itself.
+ * We don't know and we don't have to know.
+ */
+&connector.conn_i2c {
+	eeprom@51 {
+		compatible = "xxx,eeprom";
+		reg = <0x51>;
+	};
+};

@@ -1,0 +1,72 @@
+/dts-v1/;
+
+/ {
+    regulator {
+        compatible = "regulator-fixed";
+        regulator-min-microvolt = <0x004c4b40>;
+        regulator-max-microvolt = <0x004c4b40>;
+        gpios = <0x00000001 0x00000005 0x00000000>;
+        // [FDT_PROPDATA_PHANDLE] gpios[0]
+        phandle = <0x00000005>;
+    };
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <0x00000001>;
+        #size-cells = <0x00000001>;
+        i2c@1000 {
+            compatible = "xyz,i2c-controller";
+            reg = <0x00001000 0x00000100>;
+            #address-cells = <0x00000001>;
+            #size-cells = <0x00000000>;
+            phandle = <0x00000006>;
+        };
+        gpio@2000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00002000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000001>;
+        };
+        gpio@3000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00003000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000002>;
+        };
+    };
+    connector-a {
+        // [FDT_EXPORT_SYM] 'connector' -> phandle 0x00000003
+        // [FDT_EXPORT_SYM] 'conn_i2c' -> phandle 0x00000004
+        // [FDT_EXPORT_SYM] 'conn_5v' -> phandle 0x00000005
+        compatible = "abc,foo-connector";
+        #address-cells = <0x00000000>;
+        #interrupt-cells = <0x00000002>;
+        interrupt-map = <0x00000000 0x00000000 0x00000001 0x0000000a 0x00000000 0x00000000 0x00000100 0x00000001 0x0000000a 0x00000100 0x00000001 0x00000000 0x00000002 0x00000003 0x00000000 0x00000001 0x00000100 0x00000002 0x00000003 0x00000100>;
+        // [FDT_PROPDATA_PHANDLE] interrupt-map[8]
+        // [FDT_PROPDATA_PHANDLE] interrupt-map[28]
+        // [FDT_PROPDATA_PHANDLE] interrupt-map[48]
+        // [FDT_PROPDATA_PHANDLE] interrupt-map[68]
+        #gpio-cells = <0x00000002>;
+        gpio-map-mask = <0x0000000f 0x00000000>;
+        gpio-map-pass-thru = <0x00000000 0x0000000f>;
+        gpio-map = <0x00000000 0x00000000 0x00000001 0x0000000a 0x00000000 0x00000001 0x00000000 0x00000002 0x00000003 0x00000000>;
+        // [FDT_PROPDATA_PHANDLE] gpio-map[8]
+        // [FDT_PROPDATA_PHANDLE] gpio-map[28]
+        phandle = <0x00000003>;
+        conn-i2c {
+            compatible = "i2c-bus-extension";
+            i2c-parent = <0x00000006>;
+            // [FDT_PROPDATA_PHANDLE] i2c-parent[0]
+            #address-cells = <0x00000001>;
+            #size-cells = <0x00000000>;
+            phandle = <0x00000004>;
+        };
+    };
+};
