@@ -22,7 +22,10 @@ static int nopulate_struct(char *buf, const char *fdt)
 	uint32_t tag;
 	char *p;
 
+	/* Add a FDT_NOP before the root node (first node) */
 	p = buf;
+	*((fdt32_t *)p) = cpu_to_fdt32(FDT_NOP);
+	p += FDT_TAGSIZE;
 
 	do {
 		offset = nextoffset;
