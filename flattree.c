@@ -579,7 +579,8 @@ static void flat_read_chunk(struct inbuf *inb, void *p, int len)
 	if ((inb->ptr + len) > inb->limit)
 		die("Premature end of data parsing flat device tree\n");
 
-	memcpy(p, inb->ptr, len);
+	if (p)
+		memcpy(p, inb->ptr, len);
 
 	inb->ptr += len;
 }
@@ -602,6 +603,61 @@ static void flat_realign(struct inbuf *inb, int align)
 	inb->ptr = inb->base + ALIGN(off, align);
 	if (inb->ptr > inb->limit)
 		die("Premature end of data parsing flat device tree\n");
+}
+
+static bool flat_skip_unknown_tag(struct inbuf *inb, uint32_t tag)
+{
+	uint32_t lng;
+
+	if (!(tag & FDT_TAG_STRUCTURED) || !(tag & FDT_TAG_SKIP_SAFE))
+		return false;
+
+	switch (tag & FDT_TAG_DATA_MASK) {
+	case FDT_TAG_DATA_NONE:
+		break;
+
+	case FDT_TAG_DATA_1CELL:
+		flat_read_word(inb);
+		break;
+
+	case FDT_TAG_DATA_2CELLS:
+		flat_read_word(inb);
+		flat_read_word(inb);
+		break;
+
+	case FDT_TAG_DATA_VARLEN:
+		/* Get the length */
+		lng = flat_read_word(inb);
+
+		/* Skip the following length bytes */
+		flat_read_chunk(inb, NULL, lng);
+
+		flat_realign(inb, sizeof(uint32_t));
+		break;
+	}
+
+	return true;
+}
+
+static uint32_t flat_read_tag(struct inbuf *inb)
+{
+	uint32_t tag;
+
+	do {
+		tag = flat_read_word(inb);
+		switch (tag) {
+		case FDT_BEGIN_NODE:
+		case FDT_END_NODE:
+		case FDT_PROP:
+		case FDT_NOP:
+		case FDT_END:
+			return tag;
+		default:
+			break;
+		}
+	} while (flat_skip_unknown_tag(inb, tag));
+
+	die("Cannot skip unknown tag 0x%08x\n", tag);
 }
 
 static const char *flat_read_string(struct inbuf *inb)
@@ -750,7 +806,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 		struct property *prop;
 		struct node *child;
 
-		val = flat_read_word(dtbuf);
+		val = flat_read_tag(dtbuf);
 		switch (val) {
 		case FDT_PROP:
 			if (node->children)
@@ -905,14 +961,13 @@ struct dt_info *dt_from_blob(const char *fname)
 
 	reservelist = flat_read_mem_reserve(&memresvbuf);
 
-	val = flat_read_word(&dtbuf);
-
+	val = flat_read_tag(&dtbuf);
 	if (val != FDT_BEGIN_NODE)
 		die("Device tree blob doesn't begin with FDT_BEGIN_NODE (begins with 0x%08x)\n", val);
 
 	tree = unflatten_tree(&dtbuf, &strbuf, "", flags);
 
-	val = flat_read_word(&dtbuf);
+	val = flat_read_tag(&dtbuf);
 	if (val != FDT_END)
 		die("Device tree blob doesn't end with FDT_END\n");
 

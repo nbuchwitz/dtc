@@ -1,0 +1,19 @@
+/dts-v1/;
+
+/ {
+	prop-int = <0x3201>;
+	prop-str = "abcd";
+
+	subnode1 {
+		prop-int = <0x6401 0x6402>;
+	};
+
+	subnode2 {
+		prop-int1 = <0x64020 0x64021>;
+		prop-int2 = <0x32022>;
+
+		subsubnode {
+			prop-bool;
+		};
+	};
+};
