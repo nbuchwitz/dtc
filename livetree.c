@@ -733,8 +733,8 @@ static struct property *get_property_by_label_(struct node *tree,
 	return NULL;
 }
 
-struct marker *get_marker_label(struct node *tree, const char *label,
-				struct node **node, struct property **prop)
+static struct marker *get_marker_label_(struct node *tree, const char *label,
+					struct node **node, struct property **prop)
 {
 	struct marker *m;
 	struct property *p;
@@ -751,7 +751,7 @@ struct marker *get_marker_label(struct node *tree, const char *label,
 	}
 
 	for_each_child(tree, c) {
-		m = get_marker_label(c, label, node, prop);
+		m = get_marker_label_(c, label, node, prop);
 		if (m)
 			return m;
 	}
@@ -956,6 +956,22 @@ struct property *get_property_by_label(struct dt_info *dti, const char *label,
 			return property;
 	}
 
+	*node = NULL;
+	return NULL;
+}
+
+struct marker *get_marker_label(struct dt_info *dti, const char *label,
+				struct node **node, struct property **prop)
+{
+	struct marker *marker;
+
+	if (dti->dt) {
+		marker = get_marker_label_(dti->dt, label, node, prop);
+		if (marker)
+			return marker;
+	}
+
+	*prop = NULL;
 	*node = NULL;
 	return NULL;
 }

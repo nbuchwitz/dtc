@@ -447,7 +447,6 @@ static void check_duplicate_label(struct check *c, struct dt_info *dti,
 				  const char *label, struct node *node,
 				  struct property *prop, struct marker *mark)
 {
-	struct node *dt = dti->dt;
 	struct node *othernode = NULL;
 	struct property *otherprop = NULL;
 	struct marker *othermark = NULL;
@@ -457,8 +456,7 @@ static void check_duplicate_label(struct check *c, struct dt_info *dti,
 	if (!othernode)
 		otherprop = get_property_by_label(dti, label, &othernode);
 	if (!othernode)
-		othermark = get_marker_label(dt, label, &othernode,
-					       &otherprop);
+		othermark = get_marker_label(dti, label, &othernode, &otherprop);
 
 	if (!othernode)
 		return;
