@@ -584,6 +584,7 @@ static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
 
 static void complete_references_internal(struct dt_info *dti, struct node *node)
 {
+	struct symbol *exportsym;
 	struct property *prop;
 	struct marker *m;
 	struct node *c;
@@ -613,6 +614,16 @@ static void complete_references_internal(struct dt_info *dti, struct node *node)
 		}
 	}
 
+	/*
+	 * The exact same behavior exists for export symbols when a dts or a dtb
+	 * is parsed. Perform the exact same completion for export symbols
+	 */
+	for_each_symbol(node->exportsymlist, exportsym) {
+		complete_ref_and_is_local(dti, &exportsym->ref,
+					  &exportsym->is_local,
+					  exportsym->phandle);
+	}
+
 	for_each_child(node, c)
 		complete_references_internal(dti, c);
 }
@@ -637,7 +648,7 @@ struct dt_info *build_dt_info(unsigned int dtsflags,
 	fill_fullpaths(dti->dt, "");
 
 	/*
-	 * Complete references (REF_PHANDLE).
+	 * Complete references (REF_PHANDLE and export symbols).
 	 * Set ref strings and set is_local flags
 	 */
 	complete_references(dti);
