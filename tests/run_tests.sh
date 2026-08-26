@@ -419,6 +419,7 @@ tree1_tests_rw () {
     run_test setprop $TREE
     run_test del_property $TREE
     run_test del_node $TREE
+    run_test get_prop_offset_w $TREE
 }
 
 check_tests () {

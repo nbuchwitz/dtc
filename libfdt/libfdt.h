@@ -856,6 +856,12 @@ static inline struct fdt_property *fdt_get_property_w(void *fdt, int nodeoffset,
 #ifndef SWIG /* This function is not useful in Python */
 const void *fdt_getprop_by_offset(const void *fdt, int offset,
 				  const char **namep, int *lenp);
+static inline void *fdt_getprop_by_offset_w(const void *fdt, int offset,
+					    const char **namep, int *lenp)
+{
+	return (void *)(uintptr_t)fdt_getprop_by_offset(fdt, offset, namep,
+							lenp);
+}
 #endif
 
 /**

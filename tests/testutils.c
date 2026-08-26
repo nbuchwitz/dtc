@@ -230,6 +230,24 @@ const void *check_getprop_addrrange(void *fdt, int parent, int nodeoffset,
 	return propval;
 }
 
+int get_poffset(void *fdt, int nodeoffset, const char *propname)
+{
+	const char *name;
+	int poffset;
+
+	fdt_for_each_property_offset(poffset, fdt, nodeoffset) {
+		if (fdt_getprop_by_offset(fdt, poffset, &name, NULL)) {
+			if (!strcmp(name, propname))
+				return poffset;
+		}
+	}
+
+	if (poffset < 0)
+		return poffset;
+
+	return -FDT_ERR_NOTFOUND;
+}
+
 int nodename_eq(const char *s1, const char *s2)
 {
 	int len = strlen(s2);
