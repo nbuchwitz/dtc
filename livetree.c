@@ -584,7 +584,7 @@ static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
 	}
 
 	if (*is_local) {
-		refnode = get_node_by_phandle(dti->dt, phandle);
+		refnode = get_node_by_phandle(dti, phandle);
 		if (!refnode)
 			die("Node not found for phandle 0x%"PRIx32"\n", phandle);
 
@@ -834,7 +834,7 @@ static cell_t get_node_phandle_existing(struct node *node)
 	return propval_cell(prop);
 }
 
-struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
+static struct node *get_node_by_phandle_(struct node *tree, cell_t phandle)
 {
 	struct node *child, *node;
 	cell_t tree_phandle;
@@ -852,7 +852,7 @@ struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
 	}
 
 	for_each_child(tree, child) {
-		node = get_node_by_phandle(child, phandle);
+		node = get_node_by_phandle_(child, phandle);
 		if (node)
 			return node;
 	}
@@ -918,6 +918,19 @@ struct node *get_node_by_label(struct dt_info *dti, const char *label)
 	return NULL;
 }
 
+struct node *get_node_by_phandle(struct dt_info *dti, cell_t phandle)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_phandle_(dti->dt, phandle);
+		if (node)
+			return node;
+	}
+
+	return NULL;
+}
+
 static void add_phandle_property(struct node *node,
 				 const char *name, int format)
 {
@@ -941,7 +954,7 @@ cell_t get_node_phandle(struct node *root, struct node *node)
 	if (phandle_is_valid(node->phandle))
 		return node->phandle;
 
-	while (get_node_by_phandle(root, phandle))
+	while (get_node_by_phandle_(root, phandle))
 		phandle++;
 
 	node->phandle = phandle;

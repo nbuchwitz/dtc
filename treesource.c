@@ -205,7 +205,7 @@ void add_phandle_marker(struct dt_info *dti, struct property *prop, unsigned int
 	}
 
 	phandle = dtb_ld32(prop->val.val + offset);
-	refn = get_node_by_phandle(dti->dt, phandle);
+	refn = get_node_by_phandle(dti, phandle);
 
 	if (!refn) {
 		if (quiet < 1)
