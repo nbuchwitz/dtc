@@ -15,6 +15,7 @@
 #define FTF_NOPS	0x40
 #define FTF_DTFLAGS	0x80
 #define FTF_LCVERSW	0x100
+#define FTF_PROPDATA_PHANDLE	0x200
 
 static struct version_info {
 	int version;
@@ -38,7 +39,7 @@ static struct version_info {
 	 FTF_LCVERSW},
 	{20, 18, 18, FDT_V20_SIZE,
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_DTFLAGS|
-	 FTF_LCVERSW},
+	 FTF_LCVERSW|FTF_PROPDATA_PHANDLE},
 };
 
 struct emitter {
@@ -49,6 +50,7 @@ struct emitter {
 	void (*beginnode)(void *, struct label *labels);
 	void (*endnode)(void *, struct label *labels);
 	void (*property)(void *, struct label *labels);
+	void (*propdata_phandle)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -98,6 +100,11 @@ static void bin_emit_property(void *e, struct label *labels)
 	bin_emit_cell(e, FDT_PROP);
 }
 
+static void bin_emit_propdata_phandle(void *e)
+{
+	bin_emit_cell(e, FDT_PROPDATA_PHANDLE);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -106,6 +113,7 @@ static struct emitter bin_emitter = {
 	.beginnode = bin_emit_beginnode,
 	.endnode = bin_emit_endnode,
 	.property = bin_emit_property,
+	.propdata_phandle = bin_emit_propdata_phandle,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -217,6 +225,14 @@ static void asm_emit_property(void *e, struct label *labels)
 	asm_emit_cell(e, FDT_PROP);
 }
 
+static void asm_emit_propdata_phandle(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_PROPDATA_PHANDLE */\n");
+	asm_emit_cell(e, FDT_PROPDATA_PHANDLE);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -225,6 +241,7 @@ static struct emitter asm_emitter = {
 	.beginnode = asm_emit_beginnode,
 	.endnode = asm_emit_endnode,
 	.property = asm_emit_property,
+	.propdata_phandle = asm_emit_propdata_phandle,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -249,6 +266,7 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 	struct property *prop;
 	struct node *child;
 	bool seen_name_prop = false;
+	struct marker *m;
 
 	if (tree->deleted)
 		return;
@@ -279,6 +297,17 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 
 		emit->data(etarget, prop->val);
 		emit->align(etarget, sizeof(cell_t));
+
+		if (vi->flags & FTF_PROPDATA_PHANDLE) {
+			m = prop->val.markers;
+			for_each_marker_of_type(m, REF_PHANDLE) {
+				if (m->is_local) {
+					emit->propdata_phandle(etarget);
+					emit->cell(etarget, m->offset);
+					continue;
+				}
+			}
+		}
 	}
 
 	if ((vi->flags & FTF_NAMEPROPS) && !seen_name_prop) {
@@ -674,6 +703,7 @@ static uint32_t flat_read_tag(struct inbuf *inb)
 		case FDT_PROP:
 		case FDT_NOP:
 		case FDT_END:
+		case FDT_PROPDATA_PHANDLE:
 			return tag;
 		default:
 			break;
@@ -811,9 +841,11 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 				   struct inbuf *strbuf,
 				   const char *parent_flatname, int flags)
 {
+	struct property *prop = NULL;
 	struct node *node;
 	const char *flatname;
 	uint32_t val;
+	uint32_t offset;
 
 	node = build_node(NULL, NULL, NULL);
 
@@ -826,8 +858,8 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 		node->name = xstrdup(flatname);
 
 	do {
-		struct property *prop;
 		struct node *child;
+		struct marker *m;
 
 		val = flat_read_tag(dtbuf);
 		switch (val) {
@@ -840,11 +872,13 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			break;
 
 		case FDT_BEGIN_NODE:
+			prop = NULL;
 			child = unflatten_tree(dtbuf,strbuf, flatname, flags);
 			add_child(node, child);
 			break;
 
 		case FDT_END_NODE:
+			prop = NULL;
 			break;
 
 		case FDT_END:
@@ -857,6 +891,28 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 					" version <16\n");
 
 			/* Ignore */
+			break;
+
+		case FDT_PROPDATA_PHANDLE:
+			if (!(flags & FTF_PROPDATA_PHANDLE))
+				die("PROPDATA_PHANDLE tag found in flat tree"
+				    " version <20\n");
+
+			if (!prop)
+				die("PROPDATA_PHANDLE tag found without a previous PROP tag");
+
+			offset = flat_read_word(dtbuf);
+
+			/*
+			 * A reference to a phandle is present in the property
+			 * Mark the whole property as TYPE_UINT32.
+			 */
+			property_add_marker(prop, TYPE_UINT32, 0, NULL);
+
+			/* Mark the offset as a local phandle reference */
+			m = alloc_marker(offset, REF_PHANDLE, NULL);
+			m->is_local = true;
+			prop->val = data_append_markers(prop->val, m);
 			break;
 
 		default:
@@ -980,6 +1036,9 @@ struct dt_info *dt_from_blob(const char *fname)
 
 	if (version >= 18)
 		flags |= FTF_DTFLAGS | FTF_LCVERSW;
+
+	if (version >= 20)
+		flags |= FTF_PROPDATA_PHANDLE;
 
 	inbuf_init(&memresvbuf,
 		   blob + off_mem_rsvmap, blob + totalsize);

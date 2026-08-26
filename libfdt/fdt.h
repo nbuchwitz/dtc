@@ -84,6 +84,17 @@ struct fdt_property {
 #define FDT_TEST_VARLEN_CAN_SKIP	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0)
 #define FDT_TEST_NONE_NO_SKIP		FDT_TAG_NO_SKIP(FDT_TAG_DATA_NONE, 0)
 
+/*
+ * local phandle tag (meta-data). 1 cell: offset
+ *
+ * It indicates that the property defined before this tag (FDT_PROP) uses a
+ * phandle value and the node related to this phandle value is local (i.e.
+ * the node is present in the device-tree blob).
+ *
+ * offset: Offset in the property data where the phandle is available
+ */
+#define FDT_PROPDATA_PHANDLE   FDT_TAG_CAN_SKIP(FDT_TAG_DATA_1CELL, 0x1000)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))

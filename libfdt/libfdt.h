@@ -150,7 +150,8 @@ static inline void *fdt_offset_ptr_w(void *fdt, int offset, int checklen)
  * be set to the offset immediately following the tag.
  *
  * returns:
- *	the tag type (FDT_BEGIN_NODE, FDT_END_NODE, FDT_PROP, FDT_NOP, FDT_END),
+ *	the tag type (FDT_BEGIN_NODE, FDT_END_NODE, FDT_PROP, FDT_NOP, FDT_END
+ *	or any other known tags),
  *	FDT_END, if offset is out of bounds
  */
 uint32_t fdt_next_tag(const void *fdt, int offset, int *nextoffset);

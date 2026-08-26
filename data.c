@@ -127,7 +127,7 @@ struct data data_insert_at_marker(struct data d, struct marker *m,
 	return d;
 }
 
-static struct data data_append_markers(struct data d, struct marker *m)
+struct data data_append_markers(struct data d, struct marker *m)
 {
 	struct marker **mp = &d.markers;
 
@@ -288,6 +288,7 @@ struct marker *alloc_marker(unsigned int offset, enum markertype type,
 	m->type = type;
 	m->ref = ref;
 	m->next = NULL;
+	m->is_local = 0;
 
 	return m;
 }

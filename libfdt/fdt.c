@@ -213,7 +213,7 @@ int fdt_get_structured_tag_data(uint32_t tag, const void *fdt, int offset,
 
 static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffset)
 {
-	const fdt32_t *tagp, *lenp;
+	const fdt32_t *tagp, *lenp, *tmp32p;
 	uint32_t tag, len, sum;
 	int offset = startoffset;
 	int tmp_offset;
@@ -262,6 +262,25 @@ static uint32_t fdt_next_tag_all(const void *fdt, int startoffset, int *nextoffs
 	case FDT_NOP:
 		break;
 
+	case FDT_PROPDATA_PHANDLE:
+		tmp_offset = fdt_get_structured_tag_data(tag, fdt, offset, &len);
+		if (tmp_offset < 0)
+			return FDT_END; /* premature end */
+
+		sum = tmp_offset + len;
+
+		if (!can_assume(VALID_DTB) && len < FDT_CELLSIZE)
+			return FDT_END; /* premature end */
+
+		/* Check offset value */
+		tmp32p = fdt_offset_ptr(fdt, tmp_offset, sizeof(*tmp32p));
+		if (!can_assume(VALID_DTB) && !tmp32p)
+			return FDT_END; /* premature end */
+
+		/* Skip the whole data bloc */
+		offset = sum;
+		break;
+
 	default:
 		if (!(tag & FDT_TAG_STRUCTURED) || !(tag & FDT_TAG_SKIP_SAFE))
 			return FDT_END;
@@ -290,6 +309,7 @@ static bool fdt_tag_is_unknown(uint32_t tag)
 	case FDT_PROP:
 	case FDT_NOP:
 	case FDT_END:
+	case FDT_PROPDATA_PHANDLE:
 		return false;
 	default:
 		break;
@@ -342,11 +362,26 @@ uint32_t fdt_next_tag_filter(const void *fdt, int offset, int *nextoffset,
 
 bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag)
 {
+	switch (tag) {
+	case FDT_PROPDATA_PHANDLE:
+		return true;
+
+	default:
+		break;
+	}
+
 	return false;
 }
 
 bool fdt_tag_is_property_metadata(uint32_t tag)
 {
+	switch (tag) {
+	case FDT_PROPDATA_PHANDLE:
+		return true;
+	default:
+		break;
+	}
+
 	return false;
 }
 

@@ -168,6 +168,7 @@ static struct marker **add_marker(struct marker **mi,
 	nm->offset = offset;
 	nm->ref = ref;
 	nm->next = *mi;
+	nm->is_local = 0;
 	*mi = nm;
 
 	return &nm->next;
