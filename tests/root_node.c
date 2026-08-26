@@ -19,12 +19,16 @@ int main(int argc, char *argv[])
 {
 	void *fdt;
 	const struct fdt_node_header *nh;
+	int root_offset;
 
 	test_init(argc, argv);
 	fdt = load_blob_arg(argc, argv);
 
-	nh = fdt_offset_ptr(fdt, 0, sizeof(*nh));
+	root_offset = fdt_root_offset(fdt);
+	if (root_offset < 0)
+		FAIL("fdt_root_offset() returns %d", root_offset);
 
+	nh = fdt_offset_ptr(fdt, root_offset, sizeof(*nh));
 	if (! nh)
 		FAIL("NULL retrieving root node");
 

@@ -84,11 +84,16 @@ int main(int argc, char *argv[])
 	void *fdt;
 	int subnode1_offset, subnode2_offset;
 	int subsubnode1_offset, subsubnode2_offset, subsubnode2_offset2;
+	int root_offset;
 
 	test_init(argc, argv);
 	fdt = load_blob_arg(argc, argv);
 
-	check_path_offset(fdt, "/", 0);
+	root_offset = fdt_root_offset(fdt);
+	if (root_offset < 0)
+		FAIL("fdt_root_offset()) failed: %s", fdt_strerror(root_offset));
+
+	check_path_offset(fdt, "/", root_offset);
 
 	subnode1_offset = check_subnode(fdt, 0, "subnode@1");
 	subnode2_offset = check_subnode(fdt, 0, "subnode@2");
@@ -106,8 +111,8 @@ int main(int argc, char *argv[])
 
 	/* Test paths with extraneous separators */
 	check_path_offset(fdt, "", -FDT_ERR_BADPATH);
-	check_path_offset(fdt, "//", 0);
-	check_path_offset(fdt, "///", 0);
+	check_path_offset(fdt, "//", root_offset);
+	check_path_offset(fdt, "///", root_offset);
 	check_path_offset(fdt, "//subnode@1", subnode1_offset);
 	check_path_offset(fdt, "/subnode@1/", subnode1_offset);
 	check_path_offset(fdt, "//subnode@1///", subnode1_offset);
@@ -116,7 +121,7 @@ int main(int argc, char *argv[])
 	/* Test fdt_path_offset_namelen() */
 	check_path_offset_namelen(fdt, "/subnode@1", -1, -FDT_ERR_BADPATH);
 	check_path_offset_namelen(fdt, "/subnode@1", 0, -FDT_ERR_BADPATH);
-	check_path_offset_namelen(fdt, "/subnode@1", 1, 0);
+	check_path_offset_namelen(fdt, "/subnode@1", 1, root_offset);
 	check_path_offset_namelen(fdt, "/subnode@1/subsubnode", 10, subnode1_offset);
 	check_path_offset_namelen(fdt, "/subnode@1/subsubnode", 11, subnode1_offset);
 	check_path_offset_namelen(fdt, "/subnode@2TRAILINGGARBAGE", 10, subnode2_offset);

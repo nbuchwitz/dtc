@@ -39,12 +39,14 @@ static void check_search(void *fdt, const char *compat, ...)
 int main(int argc, char *argv[])
 {
 	void *fdt;
+	int root_offset;
 	int subnode1_offset, subnode2_offset;
 	int subsubnode1_offset, subsubnode2_offset;
 
 	test_init(argc, argv);
 	fdt = load_blob_arg(argc, argv);
 
+	root_offset = fdt_root_offset(fdt);
 	subnode1_offset = fdt_path_offset(fdt, "/subnode@1");
 	subnode2_offset = fdt_path_offset(fdt, "/subnode@2");
 	subsubnode1_offset = fdt_path_offset(fdt, "/subnode@1/subsubnode");
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 	    || (subsubnode1_offset < 0) || (subsubnode2_offset < 0))
 		FAIL("Can't find required nodes");
 
-	check_search(fdt, "test_tree1", 0, -FDT_ERR_NOTFOUND);
+	check_search(fdt, "test_tree1", root_offset, -FDT_ERR_NOTFOUND);
 	check_search(fdt, "subnode1", subnode1_offset, -FDT_ERR_NOTFOUND);
 	check_search(fdt, "subsubnode1", subsubnode1_offset, -FDT_ERR_NOTFOUND);
 	check_search(fdt, "subsubnode2", subsubnode2_offset, -FDT_ERR_NOTFOUND);

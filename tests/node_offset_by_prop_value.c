@@ -64,12 +64,14 @@ static void check_search_str(void *fdt, const char *propname,
 int main(int argc, char *argv[])
 {
 	void *fdt;
+	int root_offset;
 	int subnode1_offset, subnode2_offset;
 	int subsubnode1_offset, subsubnode2_offset;
 
 	test_init(argc, argv);
 	fdt = load_blob_arg(argc, argv);
 
+	root_offset = fdt_root_offset(fdt);
 	subnode1_offset = fdt_path_offset(fdt, "/subnode@1");
 	subnode2_offset = fdt_path_offset(fdt, "/subnode@2");
 	subsubnode1_offset = fdt_path_offset(fdt, "/subnode@1/subsubnode");
@@ -79,19 +81,20 @@ int main(int argc, char *argv[])
 	    || (subsubnode1_offset < 0) || (subsubnode2_offset < 0))
 		FAIL("Can't find required nodes");
 
-	check_search_cell(fdt, "prop-int", TEST_VALUE_1, 0, subnode1_offset,
-			  subsubnode1_offset, -FDT_ERR_NOTFOUND);
+	check_search_cell(fdt, "prop-int", TEST_VALUE_1, root_offset,
+			  subnode1_offset, subsubnode1_offset, -FDT_ERR_NOTFOUND);
 
 	check_search_cell(fdt, "prop-int", TEST_VALUE_2, subnode2_offset,
 			  subsubnode2_offset, -FDT_ERR_NOTFOUND);
 
-	check_search_str(fdt, "prop-str", TEST_STRING_1, 0, -FDT_ERR_NOTFOUND);
+	check_search_str(fdt, "prop-str", TEST_STRING_1, root_offset,
+			  -FDT_ERR_NOTFOUND);
 
 	check_search_str(fdt, "prop-str", "no such string", -FDT_ERR_NOTFOUND);
 
 	check_search_cell(fdt, "prop-int", TEST_VALUE_1+1, -FDT_ERR_NOTFOUND);
 
-	check_search(fdt, "no-such-prop", NULL, 0, -FDT_ERR_NOTFOUND);
+	check_search(fdt, "no-such-prop", NULL, root_offset, -FDT_ERR_NOTFOUND);
 
 	PASS();
 }
