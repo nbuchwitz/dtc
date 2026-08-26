@@ -13,3 +13,6 @@
         phandle = <0x00000001>;
     };
 };
+// [FDT_IMPORT_SYM] 'abc' (foo,bar)
+// [FDT_IMPORT_SYM] 'de1' (foo,bar)
+// [FDT_IMPORT_SYM] 'de2' (foo,bar)

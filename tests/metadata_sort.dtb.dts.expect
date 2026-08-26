@@ -1,6 +1,10 @@
 /dts-v1/;
 /addon/;
 
+/import/ abc: "foo,bar";
+/import/ de1: "foo,bar";
+/import/ de2: "foo,bar";
+
 / {
 
 	node-a {

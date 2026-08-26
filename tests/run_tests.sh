@@ -1270,8 +1270,8 @@ metadata_tests() {
 
 	run_dtc_test -I dts -O dtb -s -o metadata_sort.dtb "$SRCDIR/metadata_sort.dts"
 	base_run_test wrap_fdtdump metadata_sort.dtb metadata_sort.dtb.out
-	# Remove unneeded comments
-	sed -i '/^\/\/ /d' metadata_sort.dtb.out
+	# Remove unneeded comments, keep comments in the form '// [xxxx'
+	sed -i '/^\/\/ [^\[]/d' metadata_sort.dtb.out
 	base_run_test check_diff metadata_sort.dtb.out "$SRCDIR/metadata_sort.dtb.expect"
 	run_dtc_test -I dtb -O dts -o metadata_sort.dtb.dts metadata_sort.dtb
 	base_run_test check_diff metadata_sort.dtb.dts "$SRCDIR/metadata_sort.dtb.dts.expect"
