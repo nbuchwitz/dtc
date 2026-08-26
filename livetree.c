@@ -51,6 +51,19 @@ struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle
 	return new;
 }
 
+struct symbol *build_importsym(const char *name, const char *compatible, struct srcpos *srcpos)
+{
+	struct symbol *new = xmalloc(sizeof(*new));
+
+	memset(new, 0, sizeof(*new));
+
+	new->name = xstrdup(name);
+	new->compatible = xstrdup(compatible);
+	new->srcpos = srcpos_copy(srcpos);
+
+	return new;
+}
+
 struct symbol *chain_symbol(struct symbol *first, struct symbol *list)
 {
 	assert(first->next == NULL);

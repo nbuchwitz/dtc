@@ -50,6 +50,7 @@ static bool is_ref_relative(const char *ref)
 	struct node *nodelist;
 	struct symbol *symbol;
 	struct symbol *exportlist;
+	struct symbol *importlist;
 	struct reserve_info *re;
 	uint64_t integer;
 	unsigned int flags;
@@ -65,6 +66,7 @@ static bool is_ref_relative(const char *ref)
 %token DT_DEL_NODE
 %token DT_OMIT_NO_REF
 %token DT_EXPORT
+%token DT_IMPORT
 %token <propnodename> DT_PROPNODENAME
 %token <integer> DT_LITERAL
 %token <integer> DT_CHAR_LITERAL
@@ -87,6 +89,8 @@ static bool is_ref_relative(const char *ref)
 %type <proplist> proplist
 %type <symbol> exportdef
 %type <exportlist> exportlist
+%type <symbol> importdef
+%type <exportlist> importlist
 %type <labelref> dt_ref
 
 %type <node> devicetree
@@ -117,6 +121,17 @@ sourcefile:
 			parser_output = build_dt_info($1, $2, $3,
 			                              guess_boot_cpuid($3),
 						      NULL);
+		}
+	|  headers memreserves importlist devicetree
+		{
+			/*
+			 * importlist is created with chain_symbol() and so it
+			 * is created in reverse order. Reverse it now to have
+			 * it in correct order
+			 */
+			parser_output = build_dt_info($1, $2, $4,
+			                              $4 ? guess_boot_cpuid($4) : 0,
+			                              reverse_symbol($3));
 		}
 	;
 
@@ -168,6 +183,36 @@ memreserve:
 		{
 			add_label(&$2->labels, $1);
 			$$ = $2;
+		}
+	;
+
+importlist:
+	  importdef
+		{
+			$$ = chain_symbol($1, NULL);
+		}
+	| importlist importdef
+		{
+			$$ = chain_symbol($2, $1);
+		}
+	| importlist memreserve
+		{
+			ERROR(&@2, "Mem reserve must precede imports");
+			YYERROR;
+		}
+	;
+
+importdef:
+	DT_IMPORT DT_LABEL DT_STRING ';'
+		{
+			struct data d = $3;
+
+			if (!(last_header_flags & DTSF_ADDON))
+				ERROR(&@2, "Import symbols supported only in addon");
+
+			$$ = build_importsym($2, d.val, &@$);
+			free($2);
+			data_free($3);
 		}
 	;
 

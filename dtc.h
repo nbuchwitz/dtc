@@ -207,6 +207,7 @@ struct label {
 struct symbol {
 	bool is_local;
 	char *name;
+	char *compatible;
 	char *ref;
 	cell_t phandle;
 	char *fullpath;
@@ -286,6 +287,8 @@ struct property *chain_property(struct property *first, struct property *list);
 struct property *reverse_properties(struct property *first);
 
 struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle,
+			       struct srcpos *srcpos);
+struct symbol *build_importsym(const char *name, const char *compatible,
 			       struct srcpos *srcpos);
 struct symbol *chain_symbol(struct symbol *first, struct symbol *list);
 struct symbol *reverse_symbol(struct symbol *list);
