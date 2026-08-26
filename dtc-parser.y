@@ -39,11 +39,32 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 	 * Use a temporary dt_info in order to use dti_get_node_by_ref()
 	 */
 	struct dt_info dti = {};
+	struct node *target;
+	struct node *orphan;
 
 	dti.dt = dt;
 	dti.orphanlist = orphanlist;
 
-	return get_node_by_ref(&dti, ref);
+	target = get_node_by_ref(&dti, ref);
+	if (target)
+		return target;
+
+	/*
+	 * No node were found by get_node_by_ref().
+	 *
+	 * parser_get_node_by_ref() is called by the parser only to get a node
+	 * in order to perform a possible merge.
+	 *
+	 * The referenced used can be a label matching an orphan node. In this
+	 * merge context, returning a matching orphan node makes sense even if
+	 * no label are defined for the orphan node.
+	 */
+	for_each_orphan(orphanlist, orphan) {
+		if (streq(orphan->ref, ref))
+			return orphan;
+	}
+
+	return NULL;
 }
 
 %}
