@@ -1349,8 +1349,7 @@ static void check_obsolete_chosen_interrupt_controller(struct check *c,
 	if (node != dt)
 		return;
 
-
-	chosen = get_node_by_path(dt, "/chosen");
+	chosen = get_subnode(dt, "chosen");
 	if (!chosen)
 		return;
 
