@@ -49,6 +49,7 @@ struct fdt_property {
 
 #define FDT_MAGIC	0xd00dfeed	/* 4: version, 4: total size */
 #define FDT_TAGSIZE	sizeof(fdt32_t)
+#define FDT_CELLSIZE	sizeof(fdt32_t)
 
 #define FDT_BEGIN_NODE	0x1		/* Start node: full name */
 #define FDT_END_NODE	0x2		/* End node */
@@ -56,6 +57,28 @@ struct fdt_property {
 					   size, content */
 #define FDT_NOP		0x4		/* nop */
 #define FDT_END		0x9
+
+/* Tag values flags */
+#define FDT_TAG_STRUCTURED	(1U<<31)
+#define FDT_TAG_SKIP_SAFE	(1U<<30)
+#define FDT_TAG_DATA_MASK	(3U<<28)
+#define FDT_TAG_DATA_NONE	(0U<<28)
+#define FDT_TAG_DATA_1CELL	(1U<<28)
+#define FDT_TAG_DATA_2CELLS	(2U<<28)
+#define FDT_TAG_DATA_VARLEN	(3U<<28)
+
+#define FDT_TAG_NO_SKIP(tag_data, tag_id) \
+		(FDT_TAG_STRUCTURED | tag_data | tag_id)
+
+#define FDT_TAG_CAN_SKIP(tag_data, tag_id) \
+		(FDT_TAG_STRUCTURED | FDT_TAG_SKIP_SAFE | tag_data | tag_id)
+
+/* Tests reserved tags */
+#define FDT_TEST_NONE_CAN_SKIP		FDT_TAG_CAN_SKIP(FDT_TAG_DATA_NONE, 0)
+#define FDT_TEST_1CELL_CAN_SKIP		FDT_TAG_CAN_SKIP(FDT_TAG_DATA_1CELL, 0)
+#define FDT_TEST_2CELLS_CAN_SKIP	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_2CELLS, 0)
+#define FDT_TEST_VARLEN_CAN_SKIP	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0)
+#define FDT_TEST_NONE_NO_SKIP		FDT_TAG_NO_SKIP(FDT_TAG_DATA_NONE, 0)
 
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
