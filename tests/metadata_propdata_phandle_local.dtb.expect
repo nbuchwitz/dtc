@@ -1,0 +1,20 @@
+/dts-v1/;
+
+/ {
+    node-a {
+        subnode-a {
+            phandle = <0x00000001>;
+        };
+    };
+    node-b {
+        phandle = <0x00000002>;
+    };
+    node-c {
+    };
+    node-d {
+        ref-subnode-a = <0x00000001>;
+        // [FDT_PROPDATA_PHANDLE] ref-subnode-a[0]
+        ref-node-b = <0x00000123 0x00000456 0x00000002 0x00000789>;
+        // [FDT_PROPDATA_PHANDLE] ref-node-b[8]
+    };
+};

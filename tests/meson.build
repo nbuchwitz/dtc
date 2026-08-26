@@ -143,6 +143,7 @@ run_test_types = [
   'fdtput',
   'fdtdump',
   'fdtoverlay',
+  'metadata',
 ]
 run_test_deps = [
   dtc_tools, treegen_dtb, tests_exe,

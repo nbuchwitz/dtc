@@ -1,0 +1,23 @@
+/dts-v1/;
+
+/ {
+
+	node-a {
+
+		subnode-a {
+			phandle = <0x01>;
+		};
+	};
+
+	node-b {
+		phandle = <0x02>;
+	};
+
+	node-c {
+	};
+
+	node-d {
+		ref-subnode-a = <&{/node-a/subnode-a}>;
+		ref-node-b = <0x123 0x456 &{/node-b} 0x789>;
+	};
+};
