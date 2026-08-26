@@ -465,6 +465,82 @@ static void fill_fullpaths(struct node *tree, const char *prefix)
 		fill_fullpaths(child, tree->fullpath);
 }
 
+static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
+				      bool *is_local, cell_t phandle)
+{
+	struct node *refnode;
+
+	/*
+	 * When created from a dts, the reference is available but the is_local
+	 * flag is not set.
+	 *
+	 * When created from a dtb, the is_local flag is set (and a valid
+	 * phandle value is available) but not the reference.
+	 *
+	 * Complete both ref and is_local based on existing values.
+	 */
+
+	if (*ref) {
+		refnode = get_node_by_ref(dti->dt, *ref);
+		if (refnode)
+			*is_local = true;
+		else
+			*is_local = false;
+		return;
+	}
+
+	if (*is_local) {
+		refnode = get_node_by_phandle(dti->dt, phandle);
+		if (!refnode)
+			die("Node not found for phandle 0x%"PRIx32"\n", phandle);
+
+		*ref = refnode->fullpath;
+		return;
+	}
+
+	die("Cannot have a non local reference without a reference\n");
+}
+
+static void complete_references_internal(struct dt_info *dti, struct node *node)
+{
+	struct property *prop;
+	struct marker *m;
+	struct node *c;
+	cell_t phandle;
+
+	/*
+	 * In order to have a complete state, a REF_PHANDLE marker needs to
+	 * have a reference set (either a label or a path) and the is_local
+	 * flag must be also correctly set.
+	 *
+	 * When created from dtb, references are not present in REF_PHANDLE
+	 * markers created from the FDT_PROPDATA_PHANDLE tag. Indeed, only a
+	 * phandle value is available with this tag.
+	 *
+	 * When created from dts, references are available for REF_PHANDLE
+	 * markers but 'is_local' flag is not set.
+	 *
+	 * Completing a REF_PHANDLE marker consists in setting those fields.
+	 */
+	for_each_property(node, prop) {
+		m = prop->val.markers;
+		for_each_marker_of_type(m, REF_PHANDLE) {
+			phandle = propval_cell_n(prop,
+						 m->offset / sizeof(cell_t));
+			complete_ref_and_is_local(dti, &m->ref, &m->is_local,
+						  phandle);
+		}
+	}
+
+	for_each_child(node, c)
+		complete_references_internal(dti, c);
+}
+
+static void complete_references(struct dt_info *dti)
+{
+	complete_references_internal(dti, dti->dt);
+}
+
 struct dt_info *build_dt_info(unsigned int dtsflags,
 			      struct reserve_info *reservelist,
 			      struct node *tree, uint32_t boot_cpuid_phys)
@@ -478,6 +554,12 @@ struct dt_info *build_dt_info(unsigned int dtsflags,
 	dti->boot_cpuid_phys = boot_cpuid_phys;
 
 	fill_fullpaths(dti->dt, "");
+
+	/*
+	 * Complete references (REF_PHANDLE).
+	 * Set ref strings and set is_local flags
+	 */
+	complete_references(dti);
 
 	return dti;
 }
