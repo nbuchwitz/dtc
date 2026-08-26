@@ -224,6 +224,16 @@ static void dump_blob(void *blob, bool debug, int dump_unknown)
 			continue;
 		}
 
+		if (tag == FDT_IMPORT_SYM) {
+			p = get_structured_tag_data(tag, p, &d, &sz);
+			s = d;
+			d = d + strlen(s) + 1;
+			t = d;
+			printf("%*s// [FDT_IMPORT_SYM] '%s' (%s)\n", depth * shift, "",
+				s, t);
+			continue;
+		}
+
 		if ((tag & FDT_TAG_STRUCTURED) && (tag & FDT_TAG_SKIP_SAFE)) {
 			p = get_structured_tag_data(tag, p, &d, &sz);
 

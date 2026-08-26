@@ -140,6 +140,20 @@ struct fdt_property {
  */
 #define FDT_EXPORT_SYM_REF FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2001)
 
+/*
+ * Import symbol tag (meta-data). varlen: name, compatible
+ *
+ * It defines an imported symbol. It can be present globally in an addon dtb
+ * (i.e. outside nodes definition) meaning that this symbol needs to be resolved
+ * when the dtb is applied.
+ *
+ * name: import symbol name, i.e. the name used to reference this imported
+ *       symbol.
+ * compatible: compatible string that can be used for symbol resolution.
+ *             This string can be an empty string if it is not relevant.
+ */
+#define FDT_IMPORT_SYM	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2100)
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))

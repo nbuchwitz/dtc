@@ -20,8 +20,9 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 	const void *prop = NULL;
 	const char *propname;
 	int proplen;
-	bool expect_end = false;
+	bool root_node_found = false;
 	bool subnode_found = false;
+	bool import_sym_found = false;
 	const fdt32_t *pfdt32;
 	const char *str;
 	uint32_t val;
@@ -50,10 +51,6 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 		if (nextoffset < 0)
 			return nextoffset;
 
-		/* If we see two root nodes, something is wrong */
-		if (expect_end && tag != FDT_END && tag != FDT_NOP)
-			return -FDT_ERR_BADSTRUCTURE;
-
 		switch (tag) {
 		case FDT_NOP:
 			break;
@@ -70,10 +67,20 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			if (depth > INT_MAX)
 				return -FDT_ERR_BADSTRUCTURE;
 
-			/* The root node must have an empty name */
+			/* Root node specific checks */
 			if (depth == 1) {
 				const char *name;
 
+				/* If we see two root nodes, something is wrong */
+				if (root_node_found)
+					return -FDT_ERR_BADSTRUCTURE;
+				root_node_found = true;
+
+				/* Import symbols must be after the root node */
+				if (import_sym_found)
+					return -FDT_ERR_BADSTRUCTURE;
+
+				/* The root node must have an empty name */
 				name = fdt_get_name(fdt, offset, &len);
 				if (!name)
 					return len;
@@ -89,8 +96,6 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			if (depth == 0)
 				return -FDT_ERR_BADSTRUCTURE;
 			depth--;
-			if (depth == 0)
-				expect_end = true;
 			break;
 
 		case FDT_PROP:
@@ -236,6 +241,41 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			/* Check that the name is not an empty string */
 			if (!strlen(str))
 				return -FDT_ERR_BADVALUE;
+
+			break;
+
+		case FDT_IMPORT_SYM:
+			/* Import symbols are supported only in addons */
+			if (!(fdt_dt_flags(fdt) & FDT_FLAG_ADDON))
+				return -FDT_ERR_BADVALUE;
+
+			import_sym_found = true;
+
+			d = fdt_get_structured_tag_data(tag, fdt,
+							offset + FDT_TAGSIZE, NULL);
+			if (d < 0)
+				return d;
+
+			/* Retrieve the import symbol name */
+			str = fdt_offset_ptr(fdt, d, 1);
+			if (!str)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/* Check that the name is not an empty string */
+			len = strlen(str);
+			if (!len)
+				return -FDT_ERR_BADVALUE;
+
+			/* Retrieve the compatible */
+			d += len + 1;
+			str = fdt_offset_ptr(fdt, d, 1);
+			if (!str)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			/*
+			 * The compatible string can be an empty string
+			 * -> No additional check
+			 */
 
 			break;
 
