@@ -105,7 +105,8 @@ static void fill_prop_name(struct buf *b, size_t strs, size_t prop, size_t strof
 
 /* FDT structure helpers */
 
-static size_t emit_fdt_header(struct buf *b)
+static size_t emit_fdt_header_vers(struct buf *b, uint32_t version,
+				   uint32_t last_comp_version)
 {
 	size_t off = emit_u32(b, FDT_MAGIC);
 
@@ -113,12 +114,17 @@ static size_t emit_fdt_header(struct buf *b)
 	emit_u32(b, 0);	/* off_dt_struct */
 	emit_u32(b, 0);	/* off_dt_strings */
 	emit_u32(b, 0);	/* off_mem_rsvmap */
-	emit_u32(b, 0x11);	/* version */
-	emit_u32(b, 0x10);	/* last_comp_version */
+	emit_u32(b, version);	/* version */
+	emit_u32(b, last_comp_version);	/* last_comp_version */
 	emit_u32(b, 0);	/* boot_cpuid_phys */
 	emit_u32(b, 0);	/* size_dt_strings */
 	emit_u32(b, 0);	/* size_dt_struct */
 	return off;
+}
+
+static size_t emit_fdt_header(struct buf *b)
+{
+	return emit_fdt_header_vers(b, 0x11, 0x10);
 }
 
 static void finish_rsvmap(struct buf *b, size_t hdr, size_t rsvmap)
