@@ -277,13 +277,13 @@ class PyLibfdtBasicTests(unittest.TestCase):
         self.assertEqual(self.fdt.off_dt_struct(), 96)
         self.assertEqual(self.fdt.off_dt_strings(), 660)
         self.assertEqual(self.fdt.off_mem_rsvmap(), 48)
-        self.assertEqual(self.fdt.version(), 18)
-        self.assertEqual(self.fdt.last_comp_version(), 16)
+        self.assertEqual(self.fdt.version(), 20)
+        self.assertEqual(self.fdt.last_comp_version(), 18)
         self.assertEqual(self.fdt.boot_cpuid_phys(), 0)
         self.assertEqual(self.fdt.size_dt_strings(), 105)
         self.assertEqual(self.fdt.size_dt_struct(), 564)
         self.assertEqual(self.fdt.dt_flags(), 0)
-        self.assertEqual(self.fdt.last_comp_version_w(), 17)
+        self.assertEqual(self.fdt.last_comp_version_w(), 18)
 
     def testPack(self):
         """Test that we can pack the tree after deleting something"""

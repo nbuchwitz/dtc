@@ -628,10 +628,11 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 		err = fdt_move(fdt, buf, bufsize);
 		if (err)
 			return err;
-		if (can_assume(LATEST) || fdt_version(fdt) < 18) {
-			fdt_set_version(buf, 18);
+
+		if (can_assume(LATEST) || fdt_version(fdt) < 20) {
+			fdt_set_version(buf, 20);
 			fdt_set_dt_flags(buf, 0);
-			fdt_set_last_comp_version_w(buf, 17);
+			fdt_set_last_comp_version_w(buf, 18);
 		}
 		fdt_set_size_dt_struct(buf, struct_size);
 		fdt_set_totalsize(buf, bufsize);
@@ -661,10 +662,10 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 
 	fdt_set_magic(buf, FDT_MAGIC);
 	fdt_set_totalsize(buf, bufsize);
-	fdt_set_version(buf, 18);
-	fdt_set_last_comp_version(buf, 16);
+	fdt_set_version(buf, 20);
+	fdt_set_last_comp_version(buf, 18);
 	fdt_set_dt_flags(buf, 0);
-	fdt_set_last_comp_version_w(buf, 17);
+	fdt_set_last_comp_version_w(buf, 18);
 	fdt_set_boot_cpuid_phys(buf, fdt_boot_cpuid_phys(fdt));
 
 	return 0;

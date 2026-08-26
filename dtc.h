@@ -29,7 +29,7 @@
 #define debug(...)
 #endif
 
-#define DEFAULT_FDT_VERSION	18
+#define DEFAULT_FDT_VERSION	20
 
 /*
  * Command line options

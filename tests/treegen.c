@@ -127,7 +127,7 @@ static size_t emit_fdt_header_vers(struct buf *b, uint32_t version,
 
 static size_t emit_fdt_header(struct buf *b)
 {
-	return emit_fdt_header_vers(b, 0x12, 0x10, 0x11);
+	return emit_fdt_header_vers(b, 0x14, 0x12, 0x12);
 }
 
 static void finish_rsvmap(struct buf *b, size_t hdr, size_t rsvmap)
