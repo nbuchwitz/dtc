@@ -1,0 +1,9 @@
+/dts-v1/;
+/addon/;
+
+/import/ base_a: "foo,bar";
+/import/ base_b: "foo,baz";
+
+/ {
+	prop = <0x01>;
+};

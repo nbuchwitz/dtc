@@ -1250,21 +1250,21 @@ fdtoverlay_tests() {
 metadata_tests() {
 	for dt in metadata_propdata_phandle_local metadata_propdata_phandle_ref \
 		  metadata_addon_base metadata_exportsyms_local \
-		  metadata_exportsyms_ref; do
+		  metadata_exportsyms_ref metadata_importsyms; do
 		run_dtc_test -I dts -O dts -o $dt.dts.dts "$SRCDIR/$dt.dts"
 		base_run_test check_diff $dt.dts.dts "$SRCDIR/$dt.dts.dts.expect"
 		run_dtc_test -I dts -O dtb -o $dt.dtb "$SRCDIR/$dt.dts"
 		base_run_test wrap_fdtdump $dt.dtb $dt.dtb.out
-		# Remove unneeded comments
-		sed -i '/^\/\/ /d' $dt.dtb.out
+		# Remove unneeded comments, keep comments in the form '// [xxxx'
+		sed -i '/^\/\/ [^\[]/d' $dt.dtb.out
 		base_run_test check_diff $dt.dtb.out "$SRCDIR/$dt.dtb.expect"
 		run_test check_full $dt.dtb
 		run_dtc_test -I dtb -O dts -o $dt.dtb.dts $dt.dtb
 		base_run_test check_diff $dt.dtb.dts "$SRCDIR/$dt.dtb.dts.expect"
 		run_dtc_test -I dts -O dtb -o $dt.dtb.dts.dtb $dt.dtb.dts
 		base_run_test wrap_fdtdump $dt.dtb.dts.dtb $dt.dtb.dts.dtb.out
-		# Remove unneeded comments
-		sed -i '/^\/\/ /d' $dt.dtb.dts.dtb.out
+		# Remove unneeded comments, keep comments in the form '// [xxxx'
+		sed -i '/^\/\/ [^\[]/d' $dt.dtb.dts.dtb.out
 		base_run_test check_diff $dt.dtb.dts.dtb.out "$SRCDIR/$dt.dtb.expect"
 	done
 

@@ -1,0 +1,8 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    prop = <0x00000001>;
+};
+// [FDT_IMPORT_SYM] 'base_a' (foo,bar)
+// [FDT_IMPORT_SYM] 'base_b' (foo,baz)
