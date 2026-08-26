@@ -542,7 +542,7 @@ struct reserve_info *add_reserve_entry(struct reserve_info *list,
 	return list;
 }
 
-static void fill_fullpaths(struct node *tree, const char *prefix)
+static void fill_fullpaths_(struct node *tree, const char *prefix)
 {
 	struct node *child;
 	const char *unit;
@@ -556,7 +556,14 @@ static void fill_fullpaths(struct node *tree, const char *prefix)
 		tree->basenamelen = strlen(tree->name);
 
 	for_each_child(tree, child)
-		fill_fullpaths(child, tree->fullpath);
+		fill_fullpaths_(child, tree->fullpath);
+}
+
+static void fill_fullpaths(struct dt_info *dti)
+{
+	/* Fill fullpaths for the root node */
+	if (dti->dt)
+		fill_fullpaths_(dti->dt, "");
 }
 
 static void complete_ref_and_is_local(struct dt_info *dti, char **ref,
@@ -660,7 +667,7 @@ struct dt_info *build_dt_info(unsigned int dtsflags,
 	dti->boot_cpuid_phys = boot_cpuid_phys;
 	dti->importsymlist = importsymlist;
 
-	fill_fullpaths(dti->dt, "");
+	fill_fullpaths(dti);
 
 	/*
 	 * Complete references (REF_PHANDLE and export symbols).
