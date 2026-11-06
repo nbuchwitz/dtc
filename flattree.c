@@ -400,6 +400,45 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 		}
 	}
 
+	if (vi->flags & FTF_EXPORT_IMPORT_SYM) {
+		struct symbol *param;
+
+		for_each_symbol(tree->paramlist, param) {
+			cell_t type = FDT_PARAM_TYPE_BYTES;
+
+			prop = get_property(tree, param->ref);
+			if (!prop)
+				die("/param/ %s: no property '%s' in node %s\n",
+				    param->name, param->ref,
+				    tree->fullpath ? tree->fullpath : tree->name);
+
+			if (!prop->val.len) {
+				type = FDT_PARAM_TYPE_BOOL;
+			} else {
+				for (m = prop->val.markers; m; m = m->next) {
+					if (m->type == TYPE_UINT32)
+						type = FDT_PARAM_TYPE_U32;
+					else if (m->type == TYPE_UINT64)
+						type = FDT_PARAM_TYPE_U64;
+					else if (m->type == TYPE_STRING)
+						type = FDT_PARAM_TYPE_STRING;
+					else
+						continue;
+					break;
+				}
+			}
+
+			emit->cell(etarget, FDT_PARAM);
+			emit->cell(etarget, sizeof(cell_t) +
+				   strlen(param->name) + 1 +
+				   strlen(param->ref) + 1);
+			emit->cell(etarget, type);
+			emit->string(etarget, param->name, 0);
+			emit->string(etarget, param->ref, 0);
+			emit->align(etarget, sizeof(cell_t));
+		}
+	}
+
 	for_each_property(tree, prop) {
 		int nameoff;
 

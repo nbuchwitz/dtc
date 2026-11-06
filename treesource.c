@@ -415,6 +415,15 @@ static void write_tree_source_node(FILE *f, struct node *tree, int level)
 			fprintf(f, "&%s;\n", exportsym->ref);
 	}
 
+	for_each_symbol(tree->paramlist, exportsym) {
+		write_prefix(f, level+1);
+		if (streq(exportsym->name, exportsym->ref))
+			fprintf(f, "/param/ \"%s\";\n", exportsym->name);
+		else
+			fprintf(f, "/param/ \"%s\" = \"%s\";\n",
+				exportsym->name, exportsym->ref);
+	}
+
 	for_each_child(tree, child) {
 		fprintf(f, "\n");
 		write_tree_source_node(f, child, level+1);

@@ -1803,3 +1803,82 @@ int fdt_addon_apply(void *fdt, void *fdta, const char *target)
 {
 	return fdt_addon_apply_resolver(fdt, fdta, target, NULL, NULL);
 }
+
+int fdt_addon_param_lookup(const void *fdta, const char *name, int idx,
+			   int *nodeoffset, const char **prop, uint32_t *type)
+{
+	int offset = 0, nextoffset, node = -FDT_ERR_NOTFOUND, data;
+	const fdt32_t *typep;
+	const char *pname, *pprop;
+	uint32_t tag, len;
+	bool unknown;
+
+	FDT_RO_PROBE(fdta);
+
+	for (;;) {
+		/* FDT_PARAM is skip-safe and reported as unknown, peek at it */
+		tag = fdt_next_tag_(fdta, offset, &nextoffset, &unknown);
+		if (unknown)
+			tag = fdt32_ld_(fdt_offset_ptr_(fdta, offset));
+		if (tag == FDT_END)
+			return nextoffset < 0 && nextoffset != -FDT_ERR_TRUNCATED ?
+				nextoffset : -FDT_ERR_NOTFOUND;
+
+		if (tag == FDT_BEGIN_NODE || tag == FDT_BEGIN_NODE_REF) {
+			node = offset;
+		} else if (tag == FDT_PARAM) {
+			data = fdt_get_structured_tag_data(tag, fdta,
+							   offset + FDT_TAGSIZE,
+							   &len);
+			if (data < 0)
+				return data;
+			typep = fdt_offset_ptr(fdta, data, len);
+			if (!typep || len < sizeof(*typep) + 2)
+				return -FDT_ERR_BADSTRUCTURE;
+			pname = (const char *)(typep + 1);
+			pprop = pname + strnlen(pname, len - sizeof(*typep)) + 1;
+			if (pprop >= (const char *)typep + len)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			if (!strcmp(pname, name) && idx-- == 0) {
+				if (node < 0)
+					return -FDT_ERR_BADSTRUCTURE;
+				if (nodeoffset)
+					*nodeoffset = node;
+				if (prop)
+					*prop = pprop;
+				if (type)
+					*type = fdt32_to_cpu(*typep);
+				return 0;
+			}
+		}
+		offset = nextoffset;
+	}
+}
+
+int fdt_addon_set_param(void *fdta, const char *name, const void *val, int len)
+{
+	char propname[256];
+	const char *prop;
+	int idx, node, ret;
+
+	for (idx = 0; ; idx++) {
+		ret = fdt_addon_param_lookup(fdta, name, idx, &node, &prop, NULL);
+		if (ret == -FDT_ERR_NOTFOUND)
+			return idx ? 0 : ret;
+		if (ret)
+			return ret;
+
+		/* prop points into the blob, which setprop may move */
+		if (strlen(prop) >= sizeof(propname))
+			return -FDT_ERR_BADVALUE;
+		strcpy(propname, prop);
+
+		if (len < 0)
+			ret = fdt_delprop(fdta, node, propname);
+		else
+			ret = fdt_setprop(fdta, node, propname, val, len);
+		if (ret && !(len < 0 && ret == -FDT_ERR_NOTFOUND))
+			return ret;
+	}
+}

@@ -172,6 +172,25 @@ struct fdt_property {
  */
 #define FDT_BEGIN_NODE_REF FDT_TAG_NO_SKIP(FDT_TAG_DATA_VARLEN, 0x2200)
 
+/*
+ * Parameter tag (meta-data). varlen: type, name, property
+ *
+ * Declares an installation parameter at node level. Setting parameter <name>
+ * before the addon is applied replaces the value of <property> in this node.
+ * Several nodes may bind the same parameter name.
+ *
+ * type: FDT_PARAM_TYPE_* hint derived from the default property value
+ * name: parameter name
+ * property: name of the property in this node the parameter sets
+ */
+#define FDT_PARAM	FDT_TAG_CAN_SKIP(FDT_TAG_DATA_VARLEN, 0x2300)
+
+#define FDT_PARAM_TYPE_BYTES	0
+#define FDT_PARAM_TYPE_BOOL	1
+#define FDT_PARAM_TYPE_U32	2
+#define FDT_PARAM_TYPE_U64	3
+#define FDT_PARAM_TYPE_STRING	4
+
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))
 #define FDT_V3_SIZE	(FDT_V2_SIZE + sizeof(fdt32_t))

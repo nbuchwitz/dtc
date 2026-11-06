@@ -108,6 +108,7 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 %token DT_OMIT_NO_REF
 %token DT_EXPORT
 %token DT_IMPORT
+%token DT_PARAM
 %token <propnodename> DT_PROPNODENAME
 %token <integer> DT_LITERAL
 %token <integer> DT_CHAR_LITERAL
@@ -131,6 +132,7 @@ static struct node *parser_get_node_by_ref(struct node *dt, struct node *orphanl
 %type <prop> propdef
 %type <proplist> proplist
 %type <symbol> exportdef
+%type <symbol> paramdef
 %type <exportlist> exportlist
 %type <symbol> importdef
 %type <exportlist> importlist
@@ -422,7 +424,7 @@ nodedef:
 			 * is created in reverse order. Reverse it now to have
 			 * it in correct order
 			 */
-			$$ = build_node($2, $4, reverse_symbol($3), &@$);
+			$$ = node_split_params(build_node($2, $4, reverse_symbol($3), &@$));
 		}
 	| '{' exportlist subnodes '}' ';'
 		{
@@ -431,7 +433,7 @@ nodedef:
 			 * is created in reverse order. Reverse it now to have
 			 * it in correct order
 			 */
-			$$ = build_node(NULL, $3, reverse_symbol($2), &@$);
+			$$ = node_split_params(build_node(NULL, $3, reverse_symbol($2), &@$));
 		}
 	;
 
@@ -441,6 +443,14 @@ exportlist:
 			$$ = chain_symbol($1, NULL);
 		}
 	| exportlist exportdef
+		{
+			$$ = chain_symbol($2, $1);
+		}
+	| paramdef
+		{
+			$$ = chain_symbol($1, NULL);
+		}
+	| exportlist paramdef
 		{
 			$$ = chain_symbol($2, $1);
 		}
@@ -461,6 +471,24 @@ exportdef:
 			$$ = build_exportsym($2, $3, 0, &@$);
 			free($2);
 			free($3);
+		}
+	;
+
+paramdef:
+	DT_PARAM DT_STRING ';'
+		{
+			if (!(last_header_flags & DTSF_ADDON))
+				ERROR(&@1, "/param/ is supported only in addon");
+			$$ = build_param($2.val, $2.val, &@$);
+			data_free($2);
+		}
+	| DT_PARAM DT_STRING '=' DT_STRING ';'
+		{
+			if (!(last_header_flags & DTSF_ADDON))
+				ERROR(&@1, "/param/ is supported only in addon");
+			$$ = build_param($2.val, $4.val, &@$);
+			data_free($2);
+			data_free($4);
 		}
 	;
 

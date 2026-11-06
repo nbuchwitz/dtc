@@ -504,6 +504,7 @@ bool fdt_tag_filter_skip_metadata(void *data, uint32_t tag)
 	case FDT_EXPORT_SYM:
 	case FDT_EXPORT_SYM_REF:
 	case FDT_IMPORT_SYM:
+	case FDT_PARAM:
 		return true;
 
 	case FDT_BEGIN_NODE_REF: /* Not metadata but rather node definition */

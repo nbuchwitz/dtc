@@ -152,6 +152,12 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			return DT_EXPORT;
 		}
 
+<*>"/param/" 	{
+			DPRINT("Keyword: /param/\n");
+			BEGIN_DEFAULT();
+			return DT_PARAM;
+		}
+
 <*>"/import/" 	{
 			DPRINT("Keyword: /import/\n");
 			BEGIN_DEFAULT();

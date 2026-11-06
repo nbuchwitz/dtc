@@ -85,6 +85,8 @@ LIBFDT_1.2 {
 		fdt_get_symbol_namelen;
 		fdt_addon_apply;
 		fdt_addon_apply_resolver;
+		fdt_addon_param_lookup;
+		fdt_addon_set_param;
 		fdt_addon_resolve_default;
 	local:
 		*;

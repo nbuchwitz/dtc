@@ -22,12 +22,13 @@
 static const char usage_synopsis[] =
 	"apply an addon to a base blob\n"
 	"	fdtaddon <options> <addon.dtba>";
-static const char usage_short_opts[] = "i:o:t:e:v" USAGE_COMMON_SHORT_OPTS;
+static const char usage_short_opts[] = "i:o:t:e:p:v" USAGE_COMMON_SHORT_OPTS;
 static const struct option usage_long_opts[] = {
 	{ "input", required_argument, NULL, 'i' },
 	{ "output", required_argument, NULL, 'o' },
 	{ "target", required_argument, NULL, 't' },
 	{ "export", required_argument, NULL, 'e' },
+	{ "param", required_argument, NULL, 'p' },
 	{ "verbose", no_argument, NULL, 'v' },
 	USAGE_COMMON_LONG_OPTS,
 };
@@ -41,8 +42,115 @@ static const char *const usage_opts_help[] = { "Input base DT blob",
 					       "\n\t      --export '<export_name>=&<symbol>'"
 					       "\n\t  - Defines a export symbol pointing to a node by path"
 					       "\n\t      --export '<export_name>=&{path_to_node}'",
+					       "Set an addon parameter before applying, <name>=<value>"
+					       "\n\tMultiple --param or -p can be present.",
 					       "Verbose messages",
 					       USAGE_COMMON_OPTS_HELP };
+
+struct param {
+	char *name;
+	char *value;
+	struct param *next;
+};
+
+static struct param *params;
+
+static void add_param(const char *arg)
+{
+	struct param *p = xmalloc(sizeof(*p));
+	char *eq;
+
+	p->name = xstrdup(arg);
+	eq = strchr(p->name, '=');
+	if (!eq)
+		usage("--param expects <name>=<value>");
+	*eq = '\0';
+	p->value = eq + 1;
+	p->next = params;
+	params = p;
+}
+
+static int is_true(const char *s)
+{
+	return !strcmp(s, "") || !strcmp(s, "1") || !strcmp(s, "on") ||
+	       !strcmp(s, "yes") || !strcmp(s, "true") || !strcmp(s, "okay");
+}
+
+static int is_false(const char *s)
+{
+	return !strcmp(s, "0") || !strcmp(s, "off") || !strcmp(s, "no") ||
+	       !strcmp(s, "false") || !strcmp(s, "disabled");
+}
+
+/* Encode the value according to the type dtc recorded for the default */
+static int apply_param(void *fdta, struct param *p, int verbose)
+{
+	char buf[1024], *end;
+	const char *s, *prop;
+	uint32_t type;
+	int len = 0, node, ret;
+
+	ret = fdt_addon_param_lookup(fdta, p->name, 0, &node, &prop, &type);
+	if (ret) {
+		fprintf(stderr, "Unknown parameter '%s': %s\n", p->name,
+			fdt_strerror(ret));
+		return ret;
+	}
+
+	switch (type) {
+	case FDT_PARAM_TYPE_U32:
+	case FDT_PARAM_TYPE_U64:
+		for (s = p->value; *s; s = end) {
+			unsigned long long v = strtoull(s, &end, 0);
+
+			if (end == s) {
+				fprintf(stderr, "%s: bad number '%s'\n", p->name, s);
+				return -1;
+			}
+			if (type == FDT_PARAM_TYPE_U32) {
+				fdt32_t c = cpu_to_fdt32(v);
+
+				memcpy(buf + len, &c, sizeof(c));
+				len += sizeof(c);
+			} else {
+				fdt64_t c = cpu_to_fdt64(v);
+
+				memcpy(buf + len, &c, sizeof(c));
+				len += sizeof(c);
+			}
+			while (*end == ' ' || *end == ',')
+				end++;
+		}
+		break;
+	case FDT_PARAM_TYPE_STRING:
+		s = p->value;
+		if (!strcmp(prop, "status"))
+			s = is_false(s) ? "disabled" : is_true(s) ? "okay" : s;
+		len = strlen(s) + 1;
+		memcpy(buf, s, len);
+		break;
+	case FDT_PARAM_TYPE_BOOL:
+		if (is_false(p->value))
+			len = -1;
+		else if (!is_true(p->value)) {
+			fprintf(stderr, "%s: expected a boolean\n", p->name);
+			return -1;
+		}
+		break;
+	default:
+		fprintf(stderr, "%s: untyped parameter not supported\n", p->name);
+		return -1;
+	}
+
+	if (verbose)
+		printf("param %s=%s\n", p->name, p->value);
+
+	ret = fdt_addon_set_param(fdta, p->name, buf, len);
+	if (ret)
+		fprintf(stderr, "Failed to set '%s': %s\n", p->name,
+			fdt_strerror(ret));
+	return ret;
+}
 
 struct export_symbol {
 	char *name;
@@ -258,8 +366,21 @@ static void *do_apply(void *base, const void *addon, const char *target,
 		return NULL;
 	}
 
-	tmp_addon = xmalloc(fdt_totalsize(addon));
-	memcpy(tmp_addon, addon, fdt_totalsize(addon));
+	tmp_addon = xmalloc(fdt_totalsize(addon) + 4096);
+	ret = fdt_open_into(addon, tmp_addon, fdt_totalsize(addon) + 4096);
+	if (ret) {
+		fprintf(stderr, "\nFailed to copy addon: %s\n", fdt_strerror(ret));
+		goto fail;
+	}
+
+	for (struct param *p = params; p; p = p->next)
+		if (apply_param(tmp_addon, p, resolver ? resolver->verbose : 0))
+			goto fail;
+
+	/* The merged size must also cover what the params added */
+	max_merged_size += 4096;
+	tmp_merged = xrealloc(tmp_merged, max_merged_size);
+	fdt_set_totalsize(tmp_merged, max_merged_size);
 
 	if (!(fdt_dt_flags(tmp_addon) & FDT_FLAG_ADDON)) {
 		fprintf(stderr,
@@ -346,7 +467,7 @@ int main(int argc, char *argv[])
 	char *output_filename = NULL;
 	char *addon_filename = NULL;
 	const char *target = NULL;
-	int verbose;
+	int verbose = 0;
 	bool use_resolver = false;
 	struct resolver resolver;
 	int opt;
@@ -369,6 +490,9 @@ int main(int argc, char *argv[])
 			break;
 		case 't':
 			target = optarg;
+			break;
+		case 'p':
+			add_param(optarg);
 			break;
 		case 'e':
 			if (resolver_parse_export(&resolver, optarg) < 0) {

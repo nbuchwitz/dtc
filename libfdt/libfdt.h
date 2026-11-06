@@ -2571,6 +2571,30 @@ int fdt_overlay_target_offset(const void *fdt, const void *fdto,
  */
 int fdt_addon_apply(void *fdt, void *fdta, const char *target);
 
+/**
+ * fdt_addon_param_lookup - Finds the idx-th binding of an addon parameter
+ * @fdta: addon blob
+ * @name: parameter name
+ * @idx: index of the binding (a parameter can bind several node properties)
+ * @nodeoffset: node holding the bound property
+ * @prop: bound property name (points into the blob)
+ * @type: FDT_PARAM_TYPE_* hint
+ *
+ * returns 0 on success, -FDT_ERR_NOTFOUND past the last binding
+ */
+int fdt_addon_param_lookup(const void *fdta, const char *name, int idx,
+			   int *nodeoffset, const char **prop, uint32_t *type);
+
+/**
+ * fdt_addon_set_param - Sets an addon parameter before the addon is applied
+ * @fdta: addon blob, opened with room to grow
+ * @name: parameter name
+ * @val, @len: new value for every bound property, len < 0 deletes them
+ *
+ * returns 0 on success, -FDT_ERR_NOTFOUND if the addon has no such parameter
+ */
+int fdt_addon_set_param(void *fdta, const char *name, const void *val, int len);
+
 #ifndef SWIG /* Not available in Python */
 struct fdt_addon_resolver_ops {
 	/**

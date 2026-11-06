@@ -51,6 +51,45 @@ struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle
 	return new;
 }
 
+struct symbol *build_param(const char *name, const char *prop,
+			   struct srcpos *srcpos)
+{
+	struct symbol *new = xmalloc(sizeof(*new));
+
+	memset(new, 0, sizeof(*new));
+
+	new->is_param = true;
+	new->name = xstrdup(name);
+	new->ref = xstrdup(prop);
+	new->srcpos = srcpos_copy(srcpos);
+
+	return new;
+}
+
+/* Params share the export list in the grammar, move them to their own list */
+struct node *node_split_params(struct node *node)
+{
+	struct symbol **pp = &node->exportsymlist;
+	struct symbol **tail = &node->paramlist;
+	struct symbol *s;
+
+	while (*tail)
+		tail = &(*tail)->next;
+
+	while ((s = *pp)) {
+		if (!s->is_param) {
+			pp = &s->next;
+			continue;
+		}
+		*pp = s->next;
+		s->next = NULL;
+		*tail = s;
+		tail = &s->next;
+	}
+
+	return node;
+}
+
 struct symbol *build_importsym(const char *name, const char *compatible, struct srcpos *srcpos)
 {
 	struct symbol *new = xmalloc(sizeof(*new));
@@ -308,6 +347,25 @@ struct node *merge_nodes(struct node *old_node, struct node *new_node)
 		/* if no collision occurred, add symbol to the old node list. */
 		if (new_sym)
 			add_symbol(&old_node->exportsymlist, new_sym);
+	}
+
+	/* Merge params. A redefinition replaces the binding for that name */
+	while (new_node->paramlist) {
+		new_sym = new_node->paramlist;
+		new_node->paramlist = new_sym->next;
+		new_sym->next = NULL;
+
+		for_each_symbol(old_node->paramlist, old_sym) {
+			if (streq(old_sym->name, new_sym->name)) {
+				free(old_sym->ref);
+				old_sym->ref = new_sym->ref;
+				free(new_sym);
+				new_sym = NULL;
+				break;
+			}
+		}
+		if (new_sym)
+			add_symbol(&old_node->paramlist, new_sym);
 	}
 
 	old_node->srcpos = srcpos_extend(old_node->srcpos, new_node->srcpos);

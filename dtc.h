@@ -206,6 +206,7 @@ struct label {
 
 struct symbol {
 	bool is_local;
+	bool is_param;
 	char *name;
 	char *compatible;
 	char *ref;
@@ -236,6 +237,7 @@ struct node {
 	struct property *proplist;
 	struct node *children;
 	struct symbol *exportsymlist;
+	struct symbol *paramlist;
 
 	struct node *parent;
 	struct node *next_sibling;
@@ -293,6 +295,9 @@ struct property *reverse_properties(struct property *first);
 
 struct symbol *build_exportsym(const char *name, const char *ref, cell_t phandle,
 			       struct srcpos *srcpos);
+struct symbol *build_param(const char *name, const char *prop,
+			   struct srcpos *srcpos);
+struct node *node_split_params(struct node *node);
 struct symbol *build_importsym(const char *name, const char *compatible,
 			       struct srcpos *srcpos);
 struct symbol *chain_symbol(struct symbol *first, struct symbol *list);
